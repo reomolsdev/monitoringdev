@@ -1,0 +1,2116 @@
+<!DOCTYPE html>
+<html lang="id"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pengaturan — SEAMOLEC Monitoring Program</title>
+<style>
+  /* ==============================================================
+     TOKEN DESAIN
+     Skala spasi kelipatan 4px.
+     Hanya dua bobot: 400 (regular) dan 500 (medium).
+     ============================================================== */
+  :root {
+    /* -- spasi (kelipatan 4) -- */
+    --s-1: 4px;
+    --s-2: 8px;
+    --s-3: 12px;
+    --s-4: 16px;
+    --s-5: 20px;
+    --s-6: 24px;
+    --s-8: 32px;
+    --s-10: 40px;
+
+    /* -- warna -- */
+    --biru: #185FA5;          /* utama institusional */
+    --biru-lembut: #E6F1FB;   /* latar lembut */
+    --biru-garis: #BBD8EF;
+    --netral-latar: #F7F9FB;  /* hampir putih */
+    --putih: #FFFFFF;
+    --teks: #1C2A36;
+    --teks-redup: #5A6B7A;
+    /* --teks-samar dipakai untuk label kecil & teks sekunder. Nilai lamanya
+       (#8494A2) hanya mencapai 3,12:1 di atas putih — di bawah ambang WCAG AA
+       4,5:1. Digelapkan ke #64757F yang mencapai 4,78:1 di atas putih dan
+       tetap lolos di atas latar netral maupun biru lembut. */
+    --teks-samar: #64757F;
+    --garis: #E1E7ED;
+    --garis-kuat: #C9D3DC;
+    --abu-placeholder: #EDF1F5;
+    --abu-placeholder-garis: #DDE4EB;
+
+    /* -- warna status (WAJIB konsisten) -- */
+    /* Latar status tetap sesuai ketentuan. Teks "On track" digelapkan dari
+       #9C6500 -> #8A5800 karena di atas #FFEB9C nilai lama hanya 4,12:1
+       (gagal WCAG AA). Warna lain sudah lolos dan tidak diubah. */
+    --st-hijau-bg: #C6EFCE; --st-hijau-teks: #006100; /* Selesai / Tercapai 6,14:1 */
+    --st-kuning-bg: #FFEB9C; --st-kuning-teks: #8A5800; /* On track 5,07:1 */
+    --st-merah-bg: #FFC7CE; --st-merah-teks: #9C0006;   /* Perlu perhatian / Ditunda 5,92:1 */
+    --st-netral-bg: #F1EFE8; --st-netral-teks: #5F5E5A; /* Belum mulai / Belum ada data 5,64:1 */
+
+    /* -- bentuk & gerak -- */
+    --r-kecil: 8px;
+    --r-besar: 12px;
+    --garis-tipis: 0.5px;
+    --transisi: 120ms ease;
+
+    /* -- ukuran -- */
+    --lebar-sidebar: 248px;
+    --tinggi-header: 64px;
+  }
+
+  /* ==============================================================
+     DASAR
+     ============================================================== */
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { height: 100%; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.55;
+    color: var(--teks);
+    background: var(--netral-latar);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, p { margin: 0; }
+  h1, h2, h3 { font-weight: 500; }
+
+  /* Label yang hanya terbaca pembaca layar */
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Satu gaya fokus untuk seluruh kontrol.
+     Dipakai garis biru 2px DI LUAR elemen ditambah garis putih 1px di
+     dalamnya, supaya tetap terlihat di atas latar terang maupun di atas
+     latar biru lembut (mis. kartu tonggak berjalan). */
+  a:focus-visible,
+  button:focus-visible,
+  select:focus-visible,
+  input:focus-visible,
+  summary:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid var(--biru);
+    outline-offset: 2px;
+    border-radius: var(--r-kecil);
+  }
+
+  /* Elemen di dalam area bergulir gelap/berwarna tetap terbaca karena
+     outline diberi offset positif sehingga jatuh di atas latar induk. */
+  .kartu:focus-within,
+  .tonggak-kartu:focus-within {
+    outline: 1px solid var(--biru);
+    outline-offset: 2px;
+  }
+
+  /* Tautan lewati-ke-konten: muncul hanya saat difokus dengan Tab. */
+  .lewati {
+    position: absolute;
+    left: var(--s-4);
+    top: -100px;
+    z-index: 100;
+    padding: var(--s-2) var(--s-4);
+    border-radius: var(--r-kecil);
+    background: var(--biru);
+    color: var(--putih);
+    font-size: 13px;
+    text-decoration: none;
+    transition: top var(--transisi);
+  }
+
+  .lewati:focus { top: var(--s-4); }
+
+  /* ==============================================================
+     KERANGKA — sidebar tetap + area konten
+     ============================================================== */
+  .app {
+    display: grid;
+    grid-template-columns: var(--lebar-sidebar) minmax(0, 1fr);
+    min-height: 100vh;
+  }
+
+  /* ---------------- Sidebar ---------------- */
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-6);
+    padding: var(--s-5) var(--s-3);
+    background: var(--putih);
+    border-right: var(--garis-tipis) solid var(--garis);
+  }
+
+  .merek {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    padding: 0 var(--s-3);
+  }
+
+  .merek-lambang {
+    flex: none;
+    width: 32px; height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--r-kecil);
+    background: var(--biru);
+    color: var(--putih);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .merek-teks { min-width: 0; }
+
+  .merek-nama {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.3;
+    display: block;
+  }
+
+  .merek-sub {
+    font-size: 11px;
+    color: var(--teks-samar);
+    line-height: 1.3;
+    display: block;
+  }
+
+  .nav { flex: 1 1 auto; overflow-y: auto; }
+
+  .nav-judul {
+    padding: 0 var(--s-3) var(--s-2);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--teks-samar);
+  }
+
+  .nav-daftar {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    width: 100%;
+    padding: var(--s-2) var(--s-3);
+    border: 0;
+    border-radius: var(--r-kecil);
+    background: transparent;
+    color: var(--teks-redup);
+    font: inherit;
+    font-weight: 400;
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--transisi), color var(--transisi);
+  }
+
+  .nav-item:hover { background: var(--netral-latar); color: var(--teks); }
+
+  .nav-item[aria-current="page"] {
+    background: var(--biru-lembut);
+    color: var(--biru);
+    font-weight: 500;
+  }
+
+  .nav-ikon { flex: none; width: 16px; height: 16px; }
+
+  .sidebar-kaki {
+    padding: var(--s-3) var(--s-3) 0;
+    border-top: var(--garis-tipis) solid var(--garis);
+    font-size: 11px;
+    color: var(--teks-samar);
+  }
+
+  /* ---------------- Area konten ---------------- */
+  .utama { min-width: 0; display: flex; flex-direction: column; }
+
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-4);
+    height: var(--tinggi-header);
+    padding: 0 var(--s-8);
+    background: var(--putih);
+    border-bottom: var(--garis-tipis) solid var(--garis);
+  }
+
+  .header-judul { font-size: 18px; }
+
+  .header-kanan {
+    display: flex;
+    align-items: center;
+    gap: var(--s-4);
+  }
+
+  .peran {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+  }
+
+  .peran-label {
+    font-size: 12px;
+    color: var(--teks-redup);
+  }
+
+  .peran-pilih,
+  .filter-pilih {
+    height: 32px;
+    padding: 0 var(--s-3);
+    border: var(--garis-tipis) solid var(--garis-kuat);
+    border-radius: var(--r-kecil);
+    background: var(--putih);
+    color: var(--teks);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .peran-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 var(--s-3);
+    border-radius: var(--r-kecil);
+    background: var(--biru-lembut);
+    color: var(--biru);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .isi { flex: 1 1 auto; padding: var(--s-8); }
+
+  /* Setiap layar disembunyikan kecuali yang aktif */
+  .layar { display: none; }
+  .layar[data-aktif] { display: block; }
+
+  .layar-head { margin-bottom: var(--s-6); }
+
+  .layar-judul { font-size: 20px; margin-bottom: var(--s-1); }
+
+  .layar-deskripsi { color: var(--teks-redup); max-width: 68ch; }
+
+  /* ---------------- Placeholder abu-abu ---------------- */
+  .placeholder-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--s-4);
+  }
+
+  .placeholder {
+    grid-column: span 12;
+    min-height: 160px;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--s-2);
+    padding: var(--s-5);
+    border: var(--garis-tipis) dashed var(--abu-placeholder-garis);
+    border-radius: var(--r-besar);
+    background: var(--abu-placeholder);
+    color: var(--teks-samar);
+    font-size: 12px;
+  }
+
+  .placeholder-tag {
+    flex: none;
+    padding: 2px var(--s-2);
+    border-radius: var(--r-kecil);
+    background: var(--putih);
+    border: var(--garis-tipis) solid var(--abu-placeholder-garis);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .p-6 { grid-column: span 6; }
+
+  /* ==============================================================
+     KOMPONEN DASHBOARD
+     ============================================================== */
+
+  /* -- Baris filter periode -- */
+  .bilah-filter {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--s-4);
+    flex-wrap: wrap;
+    margin-bottom: var(--s-6);
+    padding: var(--s-4);
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-besar);
+    background: var(--putih);
+  }
+
+  .filter-grup {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+  }
+
+  /* Tinggi 32px untuk label + kontrol, dengan label dikunci setinggi 16px
+     agar semua kontrol di baris ini rata pada garis yang sama. */
+  .filter-medan {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--s-1);
+    flex: none;
+  }
+
+  /* Lebar tiap dropdown ditetapkan eksplisit — jangan biarkan <select>
+     menentukan lebarnya sendiri, karena teks opsi terpanjang akan
+     melebarkan seluruh baris dan mendorong kotak Cari keluar. */
+  .filter-medan { width: 168px; }
+  .filter-medan:nth-child(3) { width: 196px; }  /* Pilar — memuat "T - Capacity Building" */
+  .filter-medan:nth-child(1) { width: 188px; }  /* Flagship — memuat nama penuh + kode */
+
+  .filter-label { flex: none; line-height: 16px; }
+
+  /* Cari diberi lebar tetap agar sejajar dengan dropdown,
+     bukan melebar memenuhi baris. */
+  .filter-medan-cari { width: 268px; }
+  .filter-medan-cari .cari { width: 100%; flex: none; min-width: 0; }
+
+  /* Di bawah 1280px medan filter dibiarkan menyesuaikan lebar kolom,
+     bukan lebar tetap, supaya tidak meluber keluar kartu. */
+  @media (max-width: 1279px) {
+    .filter-medan,
+    .filter-medan:nth-child(1),
+    .filter-medan:nth-child(3) { width: 160px; }
+    .filter-medan-cari { width: 220px; }
+  }
+
+  /* Di bawah 768px semua kontrol filter menjadi satu kolom penuh. */
+  @media (max-width: 767px) {
+    .bilah-filter { align-items: stretch; }
+    .filter-grup { flex-direction: column; align-items: stretch; gap: var(--s-3); }
+    .filter-medan,
+    .filter-medan:nth-child(1),
+    .filter-medan:nth-child(3),
+    .filter-medan-cari { width: 100%; }
+  }
+
+  .filter-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--teks-samar);
+  }
+
+  .tombol {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    height: 32px;
+    padding: 0 var(--s-4);
+    border: var(--garis-tipis) solid var(--garis-kuat);
+    border-radius: var(--r-kecil);
+    background: var(--putih);
+    color: var(--teks);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--transisi), border-color var(--transisi);
+  }
+
+  .tombol:hover { background: var(--netral-latar); border-color: var(--teks-samar); }
+
+  .tombol-utama {
+    background: var(--biru);
+    border-color: var(--biru);
+    color: var(--putih);
+  }
+
+  .tombol-utama:hover { background: #14528F; border-color: #14528F; }
+
+  /* Varian sekunder — eksplisit, supaya ".tombol.tombol-biasa" tidak
+     bergantung pada gaya bawaan .tombol saja. */
+  .tombol-biasa { background: var(--putih); border-color: var(--garis-kuat); color: var(--teks); }
+
+  .filter-catatan {
+    margin-top: var(--s-2);
+    font-size: 11px;
+    color: var(--teks-samar);
+    flex-basis: 100%;
+  }
+
+  /* -- Pill status -- */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-1);
+    padding: 2px var(--s-2);
+    border-radius: var(--r-kecil);
+    border: var(--garis-tipis) solid rgba(28, 42, 54, 0.12);
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .pill-selesai  { background: var(--st-hijau-bg);  color: var(--st-hijau-teks); }
+  .pill-ontrack  { background: var(--st-kuning-bg); color: var(--st-kuning-teks); }
+  .pill-perhatian{ background: var(--st-merah-bg);  color: var(--st-merah-teks); }
+  .pill-netral   { background: var(--st-netral-bg); color: var(--st-netral-teks); }
+
+  .pill-titik {
+    flex: none;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* -- Bilah progres -- */
+  .bilah {
+    position: relative;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--abu-placeholder);
+    overflow: hidden;
+  }
+
+  .bilah-isi {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--biru);
+  }
+
+  .bilah-tanpa { background: var(--garis-kuat); }
+
+  /* -- Kartu SMART -- */
+  /* -- Kartu SMART --
+     Titik henti sesuai ketentuan: >=1280px tiga kolom, 768-1279px dua
+     kolom, <768px satu kolom. Lima kartu pertama kali direntang penuh
+     pada layar sangat lebar, lalu menyusut bertahap. */
+  .grid-smart {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--s-4);
+    margin-bottom: var(--s-6);
+  }
+
+  @media (min-width: 1280px) {
+    .grid-smart { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+
+  @media (min-width: 1680px) {
+    .grid-smart { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 1279px) and (min-width: 768px) {
+    .grid-smart { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 767px) {
+    .grid-smart { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  .kartu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    padding: var(--s-4);
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-besar);
+    background: var(--putih);
+  }
+
+  .kartu-kepala {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2);
+  }
+
+  .kartu-kode {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--teks-samar);
+  }
+
+  .kartu-nilai {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-2);
+    font-size: 26px;
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+
+  .kartu-satuan {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--teks-redup);
+  }
+
+  .kartu-keterangan {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--teks-redup);
+    min-height: 36px;
+  }
+
+  .kartu-kaki {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    margin-top: auto;
+  }
+
+  .kartu-capaian {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2);
+    font-size: 11px;
+    color: var(--teks-samar);
+  }
+
+  /* -- Panel -- */
+  .panel {
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-besar);
+    background: var(--putih);
+    margin-bottom: var(--s-6);
+    overflow: hidden;
+  }
+
+  .panel-kepala {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--s-4);
+    padding: var(--s-4) var(--s-5);
+    border-bottom: var(--garis-tipis) solid var(--garis);
+  }
+
+  .panel-judul { font-size: 15px; }
+
+  .panel-catatan { font-size: 12px; color: var(--teks-samar); }
+
+  /* -- Daftar progres flagship -- */
+  .flagship-daftar { list-style: none; margin: 0; padding: 0; }
+
+  .flagship-baris {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) 88px 96px minmax(120px, 1fr) 84px;
+    align-items: center;
+    gap: var(--s-4);
+    padding: var(--s-3) var(--s-5);
+    border-bottom: var(--garis-tipis) solid var(--garis);
+  }
+
+  .flagship-daftar > li:last-child .flagship-baris { border-bottom: 0; }
+
+  .flagship-baris:hover { background: var(--netral-latar); }
+
+  .flagship-identitas { min-width: 0; }
+
+  .flagship-akronim {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  .flagship-nama {
+    font-size: 11px;
+    color: var(--teks-samar);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .kode-strategi {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 var(--s-2);
+    border-radius: var(--r-kecil);
+    background: var(--biru-lembut);
+    color: var(--biru);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .flagship-divisi {
+    font-size: 12px;
+    color: var(--teks-redup);
+    overflow-wrap: anywhere;
+  }
+
+  .flagship-pecahan {
+    font-size: 12px;
+    color: var(--teks-redup);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .flagship-pecahan b { font-weight: 500; color: var(--teks); }
+
+  /* -- Daftar perlu perhatian -- */
+  .risiko-daftar { list-style: none; margin: 0; padding: 0; }
+
+  .risiko-baris {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: var(--s-2) var(--s-4);
+    padding: var(--s-3) var(--s-5);
+    border-bottom: var(--garis-tipis) solid var(--garis);
+  }
+
+  .risiko-daftar > li:last-child .risiko-baris { border-bottom: 0; }
+
+  .risiko-nama {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .risiko-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--s-1) var(--s-3);
+    margin-top: var(--s-1);
+    font-size: 11px;
+    color: var(--teks-samar);
+  }
+
+  .risiko-meta span { display: inline-flex; align-items: center; gap: var(--s-1); }
+
+  /* ==============================================================
+     HALAMAN AKTIVITAS
+     ============================================================== */
+
+  /* -- FilterBar -- */
+  .filterbar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    margin-bottom: var(--s-4);
+    padding: var(--s-4);
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-besar);
+    background: var(--putih);
+  }
+
+  .filterbar-baris {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+  }
+
+  .filterbar-baris-2 {
+    justify-content: space-between;
+    padding-top: var(--s-3);
+    border-top: var(--garis-tipis) solid var(--garis);
+  }
+
+  .cari {
+    min-width: 160px;
+    height: 32px;
+    padding: 0 var(--s-3);
+    border: var(--garis-tipis) solid var(--garis-kuat);
+    border-radius: var(--r-kecil);
+    background: var(--putih);
+    color: var(--teks);
+    font: inherit;
+    font-size: 13px;
+  }
+
+  .cari::placeholder { color: var(--teks-samar); }
+
+  .filter-hitung {
+    font-size: 12px;
+    color: var(--teks-redup);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .filter-hitung b { font-weight: 500; color: var(--teks); }
+
+  .filter-aksi { display: flex; align-items: center; gap: var(--s-3); }
+
+  /* Label pilar yang panjang ("T - Capacity Building") tidak boleh
+     terpotong di tengah kata; beri ruang dan larang pemenggalan kata. */
+  .pilar-sel span:last-child {
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: keep-all;
+  }
+
+  /* -- Tabel -- */
+  .tabel-bungkus {
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-besar);
+    background: var(--putih);
+  }
+
+  /* CATATAN PENTING soal header lengket:
+     Menetapkan overflow-x: auto otomatis membuat overflow-y menjadi auto
+     juga (spesifikasi CSS: sumbu lain tidak boleh "visible" bila salah satu
+     bukan visible). Artinya elemen ini SENDIRI menjadi scroll container —
+     dan karena tingginya hanya setinggi isi tabel, ia tidak pernah
+     menggulir vertikal, sehingga position: sticky pada <th> tidak punya
+     acuan untuk melekat.
+     Solusinya: jadikan wadah ini juga penggulir vertikal dengan tinggi
+     terbatas, sehingga header melekat di dalamnya saat 80 baris digulir. */
+  .tabel-gulir {
+    overflow: auto;
+    max-height: calc(100vh - 260px);
+    min-height: 320px;
+    border-radius: inherit;
+    overscroll-behavior: contain;
+  }
+
+  /* Di layar sempit batang gulir mendatar tidak boleh memakan tinggi
+     berlebih, dan header melekat dihitung ulang setelah menu atas. */
+  @media (max-width: 767px) {
+    .tabel-gulir { max-height: calc(100vh - 300px); min-height: 260px; }
+    .tabel { font-size: 12.5px; }
+  }
+
+  .tabel {
+    width: 100%;
+    min-width: 1180px;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+  }
+
+  .tabel caption {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .tabel thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 0;
+    background: var(--putih);
+    border-bottom: var(--garis-tipis) solid var(--garis-kuat);
+    text-align: left;
+    white-space: nowrap;
+    /* Bayangan tipis hanya saat header terlepas dari atas tabel —
+       satu garis rambut, bukan bayangan berlapis. */
+    box-shadow: 0 1px 0 var(--garis);
+  }
+
+  .tabel thead th:first-child { border-top-left-radius: var(--r-besar); }
+  .tabel thead th:last-child { border-top-right-radius: var(--r-besar); }
+
+  .urut-tombol {
+    display: flex;
+    align-items: center;
+    gap: var(--s-1);
+    width: 100%;
+    padding: var(--s-3) var(--s-3);
+    border: 0;
+    background: transparent;
+    color: var(--teks-redup);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .urut-tombol:hover { background: var(--netral-latar); color: var(--teks); }
+
+  .urut-tombol[aria-sort="ascending"],
+  .urut-tombol[aria-sort="descending"] { color: var(--biru); }
+
+  .urut-ikon { flex: none; width: 10px; height: 10px; opacity: 0.4; }
+  .urut-tombol[aria-sort="ascending"] .urut-ikon,
+  .urut-tombol[aria-sort="descending"] .urut-ikon { opacity: 1; }
+
+  .tabel tbody td {
+    padding: var(--s-3);
+    border-bottom: var(--garis-tipis) solid var(--garis);
+    vertical-align: top;
+    /* Teks membungkus antar-kata, tidak terpotong. "break-word" dipakai
+       (bukan "anywhere") supaya kolom pendek dapat membungkus pada spasi
+       tanpa memenggal nama di tengah kata, mis. "Arie / Susanty". */
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  .tabel tbody tr:last-child td { border-bottom: 0; }
+
+  .tabel tbody tr { cursor: pointer; }
+  .tabel tbody tr:hover td { background: var(--netral-latar); }
+  .tabel tbody tr[data-terpilih] td { background: var(--biru-lembut); }
+
+  /* Penanda halus di sisi kiri untuk status perlu perhatian / ditunda */
+  .tabel tbody tr[data-risiko] td:first-child { position: relative; }
+
+  .tabel tbody tr[data-risiko] td:first-child::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--st-merah-teks);
+    opacity: 0.65;
+  }
+
+  /* Lebar kolom */
+  .k-no      { width: 52px; }
+  .k-flag    { width: 88px; }
+  .k-komp    { width: 168px; }
+  .k-kode    { width: 68px; }
+  .k-akt     { min-width: 260px; }
+  .k-pilar   { width: 168px; }
+  .k-div     { width: 104px; }
+  .k-pic     { width: 140px; }
+  .k-stat    { width: 148px; }
+  .k-cat     { min-width: 180px; }
+
+  /* Nama PIC cukup pendek: biarkan utuh dalam satu baris, jangan
+     dipenggal di tengah kata. */
+  .k-pic, .k-kode, .k-div { white-space: nowrap; overflow-wrap: normal; }
+
+  .td-no { color: var(--teks-samar); font-variant-numeric: tabular-nums; }
+  .td-sub { color: var(--teks-redup); font-size: 12px; }
+
+  /* Nilai yang belum ada di sumber: ditampilkan dengan warna teks sekunder
+     dan huruf miring supaya jelas bedanya dari data sungguhan. */
+  .td-kosong, .teks-kosong { color: var(--teks-samar); font-style: italic; font-size: 12px; }
+
+  .td-flag {
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--biru);
+  }
+
+  .td-aktivitas { font-weight: 500; }
+
+  .pilar-tanda {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 18px; height: 18px;
+    border-radius: var(--r-kecil);
+    background: var(--biru-lembut);
+    color: var(--biru);
+    font-size: 10px;
+    font-weight: 500;
+  }
+
+  /* -- Pilar: kode + nama lengkap, nama tidak terpotong di tengah kata -- */
+  .pilar-sel {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    font-size: 12px;
+  }
+
+  /* Nama pilar dibungkus dalam <span> sendiri supaya bisa dilarang
+     memenggal kata ("Cap/acity/Buil/ding"), sedangkan kolomnya tetap
+     boleh membungkus antar-kata bila ruang sempit. */
+  .pilar-nama { white-space: nowrap; }
+
+  @media (max-width: 1279px) {
+    .pilar-nama { white-space: normal; overflow-wrap: break-word; word-break: normal; }
+  }
+
+  /* -- Tombol pill status di dalam tabel -- */
+  .pill-tombol {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-1);
+    padding: 3px var(--s-2);
+    border: var(--garis-tipis) solid rgba(28, 42, 54, 0.18);
+    border-radius: var(--r-kecil);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: filter var(--transisi);
+  }
+
+  .pill-tombol:hover { filter: brightness(0.95); }
+
+  .pill-tombol .pill-panah { opacity: 0.55; font-size: 9px; }
+
+  /* -- Empty state --
+     Gaya .kosong / .kosong-ikon / .kosong-judul / .kosong-teks ditetapkan
+     satu kali di blok "EMPTYSTATE" (lihat bagian bawah stylesheet) supaya
+     tidak ada dua definisi yang saling menimpa. */
+
+  /* -- Drawer detail -- */
+  .tirai {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    background: rgba(28, 42, 54, 0.32);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 160ms ease, visibility 160ms ease;
+  }
+
+  .tirai[data-buka] { opacity: 1; visibility: visible; }
+
+  .drawer {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    z-index: 11;
+    width: min(520px, 100vw);
+    display: flex;
+    flex-direction: column;
+    background: var(--putih);
+    border-left: var(--garis-tipis) solid var(--garis-kuat);
+    transform: translateX(100%);
+    visibility: hidden;
+    transition: transform 180ms ease, visibility 180ms ease;
+  }
+
+  .drawer[data-buka] { transform: translateX(0); visibility: visible; }
+
+  /* Di layar sempit drawer memakai seluruh lebar layar. */
+  @media (max-width: 767px) {
+    .drawer { width: 100vw; border-left: 0; }
+  }
+
+  .drawer-kepala {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--s-4);
+    padding: var(--s-5) var(--s-5) var(--s-4);
+    border-bottom: var(--garis-tipis) solid var(--garis);
+  }
+
+  .drawer-kode {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--teks-samar);
+    margin-bottom: var(--s-1);
+  }
+
+  .drawer-judul { font-size: 16px; line-height: 1.4; }
+
+  .tombol-silang {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 32px; height: 32px;
+    padding: 0;
+    border: var(--garis-tipis) solid var(--garis-kuat);
+    border-radius: var(--r-kecil);
+    background: var(--putih);
+    color: var(--teks-redup);
+    cursor: pointer;
+  }
+
+  .tombol-silang:hover { background: var(--netral-latar); color: var(--teks); }
+
+  .drawer-isi {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: var(--s-5);
+  }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: 132px minmax(0, 1fr);
+    gap: var(--s-3) var(--s-4);
+    margin-bottom: var(--s-6);
+  }
+
+  .field-nama {
+    font-size: 12px;
+    color: var(--teks-samar);
+  }
+
+  .field-nilai {
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+
+  .field-nilai.kosong { color: var(--teks-samar); font-style: italic; }
+
+  .drawer-bagian {
+    margin-bottom: var(--s-6);
+    padding-top: var(--s-5);
+    border-top: var(--garis-tipis) solid var(--garis);
+  }
+
+  .drawer-bagian:last-child { margin-bottom: 0; }
+
+  .drawer-subjudul {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--teks-redup);
+    margin-bottom: var(--s-3);
+  }
+
+  .riwayat-daftar { list-style: none; margin: 0; padding: 0; }
+
+  .riwayat-item {
+    padding: var(--s-3) 0;
+    border-bottom: var(--garis-tipis) solid var(--garis);
+  }
+
+  .riwayat-item:last-child { border-bottom: 0; }
+
+  .riwayat-atas {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    flex-wrap: wrap;
+    margin-bottom: var(--s-1);
+    font-size: 12px;
+  }
+
+  .riwayat-waktu { color: var(--teks-samar); }
+  .riwayat-panah { color: var(--teks-samar); }
+  .riwayat-komentar { font-size: 12px; color: var(--teks-redup); }
+
+  .kendala-kotak {
+    padding: var(--s-4);
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-kecil);
+    background: var(--netral-latar);
+    font-size: 13px;
+    color: var(--teks-redup);
+  }
+
+  .tindak-baris {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3);
+    padding: var(--s-3);
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-kecil);
+  }
+
+  .tindak-teks { font-size: 12px; color: var(--teks-redup); }
+
+  /* -- Menu pemilih status -- */
+  .menu-status {
+    position: fixed;
+    z-index: 20;
+    min-width: 176px;
+    padding: var(--s-1);
+    border: var(--garis-tipis) solid var(--garis-kuat);
+    border-radius: var(--r-kecil);
+    background: var(--putih);
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .menu-opsi {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    width: 100%;
+    padding: var(--s-2) var(--s-3);
+    border: 0;
+    border-radius: var(--r-kecil);
+    background: transparent;
+    color: var(--teks);
+    font: inherit;
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .menu-opsi:hover { background: var(--netral-latar); }
+
+  .menu-opsi[aria-selected="true"] { background: var(--biru-lembut); font-weight: 500; color: var(--biru); }
+
+  .menu-titik {
+    flex: none;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  .menu-titik.pill-selesai { background: var(--st-hijau-bg); box-shadow: inset 0 0 0 1px var(--st-hijau-teks); }
+  .menu-titik.pill-ontrack { background: var(--st-kuning-bg); box-shadow: inset 0 0 0 1px var(--st-kuning-teks); }
+  .menu-titik.pill-perhatian { background: var(--st-merah-bg); box-shadow: inset 0 0 0 1px var(--st-merah-teks); }
+  .menu-titik.pill-netral { background: var(--st-netral-bg); box-shadow: inset 0 0 0 1px var(--st-netral-teks); }
+
+  .menu-opsi-kosong {
+    border-top: var(--garis-tipis) solid var(--garis);
+    border-radius: 0 0 var(--r-kecil) var(--r-kecil);
+    margin-top: 1px;
+    color: var(--teks-redup);
+    font-style: italic;
+  }
+
+  @media (max-width: 767px) {
+    .field-grid { grid-template-columns: minmax(0, 1fr); gap: var(--s-1) 0; }
+    .field-nama { margin-top: var(--s-2); }
+  }
+
+  @media (max-width: 1279px) {
+    .flagship-baris {
+      grid-template-columns: minmax(0, 1fr) 88px;
+      grid-template-areas:
+        "identitas kode"
+        "divisi divisi"
+        "bilah bilah"
+        "pecahan pecahan";
+      gap: var(--s-2) var(--s-3);
+    }
+    .flagship-baris > .flagship-identitas { grid-area: identitas; }
+    .flagship-baris > .kode-strategi { grid-area: kode; justify-self: end; }
+    .flagship-baris > .flagship-divisi { grid-area: divisi; }
+    .flagship-baris > .bilah { grid-area: bilah; }
+    .flagship-baris > .flagship-pecahan { grid-area: pecahan; text-align: left; }
+  }
+
+  /* --------------------------------------------------------------
+     Di bawah 768px sidebar berubah menjadi menu atas: merek + deretan
+     tombol navigasi yang bisa digulir mendatar. Tidak lagi position:
+     sticky / height: 100vh supaya tidak menutupi konten.
+     -------------------------------------------------------------- */
+  @media (max-width: 767px) {
+    .app { grid-template-columns: minmax(0, 1fr); }
+
+    .sidebar {
+      position: static;
+      height: auto;
+      flex-direction: row;
+      align-items: center;
+      gap: var(--s-4);
+      padding: var(--s-3);
+      border-right: 0;
+      border-bottom: var(--garis-tipis) solid var(--garis);
+    }
+
+    .merek { flex: none; padding: 0; }
+    .merek-sub { display: none; }
+
+    .nav { flex: 1 1 auto; overflow: visible; }
+    .nav-judul { display: none; }
+
+    .nav-daftar {
+      flex-direction: row;
+      gap: var(--s-1);
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scrollbar-width: thin;
+      padding-bottom: 2px;
+    }
+
+    .nav-item {
+      width: auto;
+      flex: none;
+      gap: var(--s-2);
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .sidebar-kaki { display: none; }
+
+    .isi, .header { padding-left: var(--s-4); padding-right: var(--s-4); }
+    .p-6 { grid-column: span 12; }
+  }
+
+  /* ==============================================================
+     PAPAN KPI
+     ============================================================== */
+
+  .kpi-grup { margin-bottom: var(--s-8); }
+
+  .kpi-grup-kepala {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--s-3);
+  }
+
+  .kpi-grup-judul {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--teks);
+  }
+
+  .kpi-grup-catatan {
+    font-size: 12px;
+    color: var(--teks-samar);
+  }
+
+  /* Tabel KPI: dua kolom angka dikunci agar sejajar antar-baris. */
+  .tabel-kpi { min-width: 1080px; table-layout: fixed; }
+  .tabel-kpi th, .tabel-kpi td { white-space: normal; overflow-wrap: break-word; }
+
+  .kk-kat    { width: 96px; }
+  .kk-prog   { width: 200px; }
+  .kk-rumus  { min-width: 300px; }
+  .kk-target { width: 108px; text-align: right; }
+  .kk-satuan { width: 96px; }
+  .kk-real   { width: 140px; }
+  .kk-capa   { width: 92px; text-align: right; }
+  .kk-stat   { width: 140px; }
+
+  .tabel-kpi th.kk-target, .tabel-kpi th.kk-capa { text-align: right; }
+  .tabel-kpi th.kk-target .urut-tombol,
+  .tabel-kpi th.kk-capa .urut-tombol { justify-content: flex-end; }
+
+  .td-angka { font-variant-numeric: tabular-nums; font-weight: 500; }
+  .td-capaian { font-variant-numeric: tabular-nums; font-weight: 500; }
+
+  /* Tanda pisah untuk nilai yang belum ada — sengaja netral, bukan "0". */
+  .tanda-kosong {
+    color: var(--teks-samar);
+    font-weight: 400;
+  }
+
+  .td-program {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .td-program-kode {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--biru);
+  }
+
+  /* Kolom realisasi: input angka tanpa bingkai sampai difokus/disentuh. */
+  .realisasi-bungkus {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+  }
+
+  .realisasi-input {
+    width: 84px;
+    height: 30px;
+    padding: 0 var(--s-2);
+    border: var(--garis-tipis) solid var(--garis-kuat);
+    border-radius: var(--r-kecil);
+    background: var(--putih);
+    color: var(--teks);
+    font: inherit;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .realisasi-input::placeholder { color: var(--teks-samar); }
+
+  .realisasi-input:focus-visible {
+    outline: 2px solid var(--biru);
+    outline-offset: 1px;
+    border-color: var(--biru);
+  }
+
+  .realisasi-input[aria-invalid="true"] {
+    border-color: var(--st-merah-teks);
+    background: var(--st-merah-bg);
+    color: var(--st-merah-teks);
+  }
+
+  .realisasi-galat {
+    font-size: 11px;
+    color: var(--st-merah-teks);
+  }
+
+  .kpi-kaki {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--s-4);
+  }
+
+  .kpi-ringkas {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--teks-redup);
+  }
+
+  /* ==============================================================
+     TIMELINE MILESTONE
+     ============================================================== */
+
+  .linimasa {
+    position: relative;
+    margin: 0;
+    padding: 0 0 0 var(--s-8);
+    list-style: none;
+  }
+
+  /* Garis vertikal: berjalan dari titik tonggak pertama sampai titik
+     tonggak terakhir. Ditutup di ujung bawah agar tidak menggantung. */
+  .linimasa::before {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 14px;
+    bottom: 14px;
+    width: 2px;
+    background: var(--garis-kuat);
+  }
+
+  .tonggak {
+    position: relative;
+    padding: 0 0 var(--s-6) 0;
+  }
+
+  .tonggak:last-child { padding-bottom: 0; }
+
+  /* Titik penanda pada garis */
+  .tonggak-titik {
+    position: absolute;
+    left: calc(-1 * var(--s-8) + 8px);
+    top: 8px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--putih);
+    background: var(--garis-kuat);
+    box-shadow: 0 0 0 1px var(--garis-kuat);
+  }
+
+  .tonggak-kartu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    padding: var(--s-4);
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-besar);
+    background: var(--putih);
+  }
+
+  .tonggak-kepala {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+  }
+
+  .tonggak-tahun {
+    font-size: 18px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  /* Penanda periode — teks selalu ada, warna hanya pelengkap. */
+  .periode-tanda {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-1);
+    padding: 2px var(--s-2);
+    border: var(--garis-tipis) solid var(--garis-kuat);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--teks-redup);
+    background: var(--putih);
+  }
+
+  .periode-tanda::before {
+    content: "";
+    flex: none;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .tonggak-isi {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+  }
+
+  .tonggak-baris {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: var(--s-2) var(--s-3);
+    align-items: start;
+  }
+
+  .tonggak-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--teks-samar);
+    padding-top: 1px;
+  }
+
+  .tonggak-nilai { font-size: 13px; }
+
+  .tonggak-daftar {
+    margin: 0;
+    padding-left: var(--s-4);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .tonggak-daftar li { margin-bottom: 2px; }
+  .tonggak-daftar li:last-child { margin-bottom: 0; }
+
+  /* --- Periode berjalan: sedikit lebih tegas --- */
+  .tonggak[data-periode="berjalan"] .tonggak-titik {
+    background: var(--biru);
+    box-shadow: 0 0 0 1px var(--biru);
+  }
+
+  .tonggak[data-periode="berjalan"] .tonggak-kartu {
+    border-color: var(--biru);
+    background: var(--biru-lembut);
+  }
+
+  .tonggak[data-periode="berjalan"] .tonggak-tahun { color: var(--biru); }
+
+  .tonggak[data-periode="berjalan"] .periode-tanda {
+    border-color: var(--biru);
+    color: var(--biru);
+  }
+
+  /* --- Periode mendatang: sengaja lebih redup --- */
+  .tonggak[data-periode="mendatang"] .tonggak-titik {
+    background: var(--putih);
+    border-color: var(--putih);
+    box-shadow: 0 0 0 1px var(--garis-kuat);
+  }
+
+  .tonggak[data-periode="mendatang"] .tonggak-tahun { color: var(--teks-redup); }
+
+  .tonggak[data-periode="mendatang"] .tonggak-kartu {
+    background: var(--netral-latar);
+  }
+
+  .tonggak[data-periode="mendatang"] .tonggak-daftar { color: var(--teks-redup); }
+
+  @media (max-width: 767px) {
+    .linimasa { padding-left: var(--s-6); }
+    .linimasa::before { left: 11px; }
+    .tonggak-titik { left: calc(-1 * var(--s-6) + 5px); width: 14px; height: 14px; }
+    .tonggak-baris { grid-template-columns: minmax(0, 1fr); gap: var(--s-1); }
+  }
+
+  /* ==============================================================
+     KERANGKA M&E
+     ============================================================== */
+
+  .tabel-me { min-width: 1180px; table-layout: fixed; }
+
+  /* Lebar harus cukup untuk JUDUL kolom, bukan hanya isinya — kalau tidak,
+     judul panjang akan menabrak kolom sebelahnya. */
+  .mk-komp   { width: 168px; }
+  .mk-metode { min-width: 310px; }
+  .mk-pj     { width: 148px; }
+  .mk-frek   { width: 168px; }
+  .mk-titik  { min-width: 280px; }
+
+  /* Judul kolom boleh membungkus antar-kata agar tidak meluber. */
+  .tabel-me thead th { white-space: normal; overflow-wrap: break-word; }
+
+  /* Nama komponen jadi penanda utama tiap baris. */
+  .td-komponen {
+    font-weight: 500;
+    color: var(--teks);
+  }
+
+  /* Daftar butir metode: dipecah dari kalimat berkoma pada sumber. */
+  .daftar-butir {
+    margin: 0;
+    padding-left: var(--s-4);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .daftar-butir li { margin-bottom: 1px; }
+  .daftar-butir li:last-child { margin-bottom: 0; }
+
+  .pj-tanda {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--s-2);
+    border: var(--garis-tipis) solid var(--garis-kuat);
+    border-radius: var(--r-kecil);
+    background: var(--biru-lembut);
+    color: var(--biru);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  /* ==============================================================
+     PENDANAAN
+     ============================================================== */
+
+  /* Ringkasan kecil: jumlah program per sumber dana utama. */
+  .ringkas-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--s-3);
+    margin-bottom: var(--s-6);
+  }
+
+  @media (max-width: 1279px) { .ringkas-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 767px)  { .ringkas-grid { grid-template-columns: minmax(0, 1fr); } }
+
+  .ringkas-kartu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+    padding: var(--s-4);
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-besar);
+    background: var(--putih);
+    /* Tinggi seragam antar kartu, keterangan tetap di bawah. */
+    height: 100%;
+  }
+
+  .ringkas-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--teks-samar);
+    min-height: 16px;
+  }
+
+  .ringkas-angka {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-2);
+    font-size: 26px;
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ringkas-satuan {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--teks-redup);
+  }
+
+  .ringkas-rinci {
+    font-size: 12px;
+    color: var(--teks-redup);
+    line-height: 1.45;
+    margin-top: auto;
+  }
+
+  .tabel-dana { min-width: 1120px; table-layout: fixed; }
+  .tabel-dana thead th { white-space: normal; overflow-wrap: break-word; }
+
+  .dk-kat   { width: 124px; }
+  .dk-item  { width: 190px; }
+  .dk-kode  { width: 110px; }
+  .dk-div   { width: 108px; }
+  .dk-sumber{ width: 200px; }
+  .dk-alasan{ min-width: 280px; }
+
+  .td-asal {
+    font-weight: 500;
+    color: var(--teks);
+  }
+
+  /* Label kategori: "Program" vs "Infrastruktur TI" dibedakan halus. */
+  .kat-tanda {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--s-2);
+    border: var(--garis-tipis) solid transparent;
+    border-radius: var(--r-kecil);
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .kat-program { background: var(--biru-lembut); color: var(--biru); border-color: var(--biru); }
+  .kat-ti      { background: var(--st-netral-bg); color: var(--st-netral-teks); border-color: var(--garis-kuat); }
+
+  /* ==============================================================
+     SKELETON — keadaan memuat
+     ============================================================== */
+
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: #E9EDF2;
+    border-radius: var(--r-kecil);
+  }
+
+  /* Kilau bergerak; dinonaktifkan bila pengguna memilih kurangi gerak. */
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+    transform: translateX(-100%);
+    animation: skeleton-kilau 1.2s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-kilau {
+    100% { transform: translateX(100%); }
+  }
+
+  .sk-kartu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    padding: var(--s-4);
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-besar);
+    background: var(--putih);
+  }
+
+  .sk-baris {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    padding: var(--s-3);
+    border-bottom: var(--garis-tipis) solid var(--garis);
+  }
+
+  .sk-baris:last-child { border-bottom: 0; }
+
+  /* Tabel skeleton: kolom sejajar dengan tabel sungguhan. */
+  .sk-tabel-baris {
+    display: grid;
+    grid-template-columns: 52px 88px 168px 68px minmax(200px, 1fr) 168px;
+    gap: var(--s-3);
+    align-items: center;
+    padding: var(--s-3);
+    border-bottom: var(--garis-tipis) solid var(--garis);
+  }
+
+  .sk-tabel-baris:last-child { border-bottom: 0; }
+
+  /* Baris skeleton di dalam <tbody>: satu sel yang membentang penuh,
+     berisi satu baris skeleton berbentuk grid. */
+  .baris-memuat > td {
+    padding: var(--s-3);
+    border-bottom: var(--garis-tipis) solid var(--garis);
+    background: transparent;
+  }
+
+  .baris-memuat:last-child > td { border-bottom: 0; }
+
+  .baris-memuat .sk-tabel-baris { padding: 0; border-bottom: 0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton::after { animation: none; opacity: 0; }
+  }
+
+  /* ==============================================================
+     EMPTYSTATE — keadaan kosong
+     ============================================================== */
+
+  .kosong {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--s-3);
+    padding: var(--s-8) var(--s-5);
+    border: var(--garis-tipis) dashed var(--garis-kuat);
+    border-radius: var(--r-besar);
+    background: var(--putih);
+    text-align: center;
+  }
+
+  .kosong-ikon {
+    display: grid;
+    place-items: center;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--netral-latar);
+    color: var(--teks-samar);
+  }
+
+  .kosong-judul {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--teks);
+  }
+
+  .kosong-teks {
+    font-size: 13px;
+    color: var(--teks-redup);
+    max-width: 46ch;
+    line-height: 1.5;
+  }
+
+  /* Baris tabel yang seluruhnya berisi EmptyState: hilangkan garis bawah
+     dan warna baris supaya kotaknya terlihat sebagai satu kesatuan. */
+  .baris-kosong > td {
+    padding: var(--s-5) var(--s-3);
+    background: transparent;
+  }
+
+  .baris-kosong > td::before { content: none; }
+
+  .baris-kosong .kosong { border-style: solid; }
+
+  /* ==============================================================
+     KETERBACAAN ANGKA
+     ============================================================== */
+
+  /* Semua angka memakai tabular figures agar digit sejajar antar-baris,
+     sehingga kolom angka tidak "bergoyang" saat nilainya berbeda. */
+  .td-angka,
+  .td-capaian,
+  .td-no,
+  .kartu-nilai,
+  .ringkas-angka,
+  .tonggak-tahun,
+  .filter-hitung,
+  .realisasi-input {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* Laporan & Pengaturan: komponen khusus dua menu. */
+  :is(#layar-laporan, #layar-pengaturan) .lp-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: var(--s-6); align-items: start; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-body { padding: var(--s-5); }
+  :is(#layar-laporan, #layar-pengaturan) .lp-stack { display: grid; gap: var(--s-4); }
+  :is(#layar-laporan, #layar-pengaturan) .lp-note { color: var(--teks-redup); font-size: 12px; line-height: 1.55; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-callout { padding: var(--s-4); border: var(--garis-tipis) solid var(--biru-garis); border-radius: var(--r-kecil); background: var(--biru-lembut); color: var(--biru); font-size: 12px; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-4); }
+  :is(#layar-laporan, #layar-pengaturan) .lp-field { display: grid; gap: var(--s-2); min-width: 0; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-field :is(input, select) { width: 100%; min-width: 0; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-wide { grid-column: 1 / -1; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s-3); }
+  :is(#layar-laporan, #layar-pengaturan) .lp-divider { border-top: var(--garis-tipis) solid var(--garis); padding-top: var(--s-4); }
+  :is(#layar-laporan, #layar-pengaturan) .lp-check { display: flex; align-items: flex-start; gap: var(--s-2); font-size: 13px; color: var(--teks); }
+  :is(#layar-laporan, #layar-pengaturan) input[type="checkbox"] { accent-color: var(--biru); width: 16px; height: 16px; flex: none; margin: 2px 0 0; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-3); }
+  :is(#layar-laporan, #layar-pengaturan) .lp-stat { border: var(--garis-tipis) solid var(--garis); border-radius: var(--r-kecil); padding: var(--s-3); background: var(--netral-latar); }
+  :is(#layar-laporan, #layar-pengaturan) .lp-stat strong { display: block; font-weight: 500; font-size: 22px; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-title { font-size: 18px; font-weight: 500; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-table { table-layout: auto; width: 100%; min-width: 520px; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-table :is(th, td) { white-space: normal; overflow-wrap: anywhere; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-table tbody tr { cursor: default; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-table .lp-number { text-align: right; font-variant-numeric: tabular-nums; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-meta { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: var(--s-2) var(--s-3); margin: 0; font-size: 12px; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-meta dt { color: var(--teks-redup); }
+  :is(#layar-laporan, #layar-pengaturan) .lp-meta dd { margin: 0; overflow-wrap: anywhere; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-file { display: flex; gap: var(--s-3); align-items: flex-start; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-file-icon { display: grid; place-items: center; width: 40px; height: 44px; flex: none; color: var(--biru); background: var(--biru-lembut); border-radius: var(--r-kecil); font-size: 11px; font-weight: 500; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-file-name { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-list { margin: 0; padding-left: var(--s-5); display: grid; gap: var(--s-3); font-size: 13px; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+  @media (max-width: 1100px) { :is(#layar-laporan, #layar-pengaturan) .lp-grid { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 767px) { :is(#layar-laporan, #layar-pengaturan) .lp-form { grid-template-columns: minmax(0, 1fr); } :is(#layar-laporan, #layar-pengaturan) .lp-stat-grid { grid-template-columns: minmax(0, 1fr); } :is(#layar-laporan, #layar-pengaturan) .lp-meta { grid-template-columns: minmax(0, 1fr); } }
+
+  :is(#layar-laporan, #layar-pengaturan) h4 { margin: 0; font-weight: 500; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-table thead th { padding: var(--s-3); font-size: 11px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--teks-redup); }
+  :is(#layar-laporan, #layar-pengaturan) .tabel-gulir { min-height: 0; }
+
+  /* Pengaturan akun sederhana. */
+  #layar-pengaturan .akun-identitas { display: flex; align-items: center; gap: var(--s-4); }
+  #layar-pengaturan .akun-avatar { display: grid; place-items: center; width: 56px; height: 56px; flex: none; border-radius: 50%; background: var(--biru-lembut); color: var(--biru); }
+  #layar-pengaturan .akun-fieldset { min-width: 0; padding: 0; margin: 0; border: 0; }
+  #layar-pengaturan .akun-fieldset legend { padding: 0; margin-bottom: var(--s-3); }
+  #layar-pengaturan .akun-tema-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
+  #layar-pengaturan .akun-tema { position: relative; display: grid; gap: var(--s-3); padding: var(--s-3); border: 1px solid var(--garis); border-radius: var(--r-kecil); cursor: pointer; }
+  #layar-pengaturan .akun-tema:has(input:checked) { border-color: var(--biru); background: var(--biru-lembut); }
+  #layar-pengaturan .akun-tema:has(input:focus-visible) { outline: 2px solid var(--biru); outline-offset: 3px; }
+  #layar-pengaturan .akun-tema input { position: absolute; right: 12px; bottom: 16px; margin: 0; width: 16px; height: 16px; accent-color: var(--biru); }
+  #layar-pengaturan .akun-tema-label { display: flex; align-items: center; gap: var(--s-2); font-size: 13px; padding-right: var(--s-6); }
+  #layar-pengaturan .akun-tema-preview { display: flex; height: 88px; border: 1px solid #DDE4EB; border-radius: 6px; overflow: hidden; background: #F7F9FB; }
+  #layar-pengaturan .akun-preview-sidebar { width: 25%; background: #FFFFFF; border-right: 1px solid #DDE4EB; }
+  #layar-pengaturan .akun-preview-isi { display: grid; align-content: start; gap: 8px; flex: 1; padding: 12px; }
+  #layar-pengaturan .akun-preview-isi span { display: block; height: 12px; border-radius: 3px; background: #E1E7ED; }
+  #layar-pengaturan .akun-preview-isi span:first-child { width: 55%; background: #BBD8EF; }
+  #layar-pengaturan .akun-preview-gelap { background: #111B26; border-color: #35475A; }
+  #layar-pengaturan .akun-preview-gelap .akun-preview-sidebar { background: #1B2938; border-color: #35475A; }
+  #layar-pengaturan .akun-preview-gelap .akun-preview-isi span { background: #35475A; }
+  #layar-pengaturan .akun-preview-gelap .akun-preview-isi span:first-child { background: #456D94; }
+  #layar-pengaturan .akun-check-note { display: block; margin-top: var(--s-1); font-size: 12px; color: var(--teks-redup); }
+  #layar-pengaturan .akun-tombol { justify-self: start; }
+  #layar-pengaturan .akun-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--s-5); padding-top: var(--s-4); border-top: var(--garis-tipis) solid var(--garis); }
+  #layar-pengaturan .akun-footer .lp-note { max-width: 64ch; }
+  body:has(#layar-pengaturan[data-aktif] #tema-gelap:checked) {
+    --biru: #8AC2FF; --biru-lembut: #203C56; --biru-garis: #456D94;
+    --netral-latar: #111B26; --putih: #1B2938; --teks: #EAF0F6;
+    --teks-redup: #B7C6D5; --teks-samar: #A4B5C5; --garis: #35475A;
+    --garis-kuat: #4D647A; --abu-placeholder: #26384A; --abu-placeholder-garis: #35475A;
+  }
+  body:has(#layar-pengaturan[data-aktif] #tema-gelap:checked) .tombol-utama { background: #185FA5; border-color: #185FA5; color: #FFFFFF; }
+  @media (max-width: 767px) { #layar-pengaturan .akun-footer { align-items: flex-start; flex-direction: column; } }
+
+</style>
+</head>
+<body>
+
+<a class="lewati" href="#isi-utama">Lewati ke konten utama</a>
+
+<div class="app">
+
+  <!-- ============================ SIDEBAR ============================ -->
+  <aside class="sidebar">
+    <div class="merek">
+      <span class="merek-lambang" aria-hidden="true">SE</span>
+      <span class="merek-teks">
+        <span class="merek-nama">SEAMOLEC</span>
+        <span class="merek-sub">Monitoring Program</span>
+      </span>
+    </div>
+
+    <nav class="nav" aria-labelledby="nav-judul">
+      <h2 class="nav-judul" id="nav-judul">Navigasi</h2>
+      <ul class="nav-daftar">
+        <li>
+          <a class="nav-item" href="dashboard.html" style="text-decoration: none;">
+            <svg class="nav-ikon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.2"></rect><rect x="9" y="1.5" width="5.5" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.2"></rect><rect x="1.5" y="9" width="5.5" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.2"></rect><rect x="9" y="9" width="5.5" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.2"></rect></svg>
+            Dashboard
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" href="aktivitas.html" style="text-decoration: none;">
+            <svg class="nav-ikon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"></path></svg>
+            Aktivitas
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" href="kpi.html" style="text-decoration: none;">
+            <svg class="nav-ikon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 13.5h12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"></path><rect x="3" y="8" width="2.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"></rect><rect x="6.75" y="5" width="2.5" height="8.5" rx="1" stroke="currentColor" stroke-width="1.2"></rect><rect x="10.5" y="2.5" width="2.5" height="11" rx="1" stroke="currentColor" stroke-width="1.2"></rect></svg>
+            Papan KPI
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" href="timeline.html" style="text-decoration: none;">
+            <svg class="nav-ikon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="3" cy="8" r="1.6" stroke="currentColor" stroke-width="1.2"></circle><circle cx="8" cy="8" r="1.6" stroke="currentColor" stroke-width="1.2"></circle><circle cx="13" cy="8" r="1.6" stroke="currentColor" stroke-width="1.2"></circle><path d="M4.6 8h1.8M9.6 8h1.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"></path></svg>
+            Timeline Milestone
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" href="me.html" style="text-decoration: none;">
+            <svg class="nav-ikon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 13.5V6.5M6.5 13.5V2.5M10.5 13.5V9M13.5 13.5V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"></path></svg>
+            Kerangka M&amp;E
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" href="pendanaan.html" style="text-decoration: none;">
+            <svg class="nav-ikon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="1.5" y="3.5" width="13" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"></rect><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.2"></circle><path d="M4 8h.01M12 8h.01" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path></svg>
+            Pendanaan
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" href="laporan.html" style="text-decoration: none;">
+            <svg class="nav-ikon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 1.5h5.5L13 5v9.5H4z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"></path><path d="M9.5 1.5V5H13" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"></path><path d="M6 8.5h4.5M6 11h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"></path></svg>
+            Laporan
+          </a>
+        </li>
+        <li>
+          <a class="nav-item" aria-current="page" href="pengaturan.html" style="text-decoration: none;">
+            <svg class="nav-ikon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.2"></circle><path d="M8 1.5v1.8M8 12.7v1.8M14.5 8h-1.8M3.3 8H1.5M12.6 3.4l-1.3 1.3M4.7 11.3l-1.3 1.3M12.6 12.6l-1.3-1.3M4.7 4.7L3.4 3.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"></path></svg>
+            Pengaturan
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="sidebar-kaki">
+      Kerangka prototipe · FYDP 2025–2029
+    </div>
+  </aside>
+
+  <!-- ============================ KONTEN ============================ -->
+  <div class="utama">
+
+    <header class="header">
+      <h1 class="header-judul" id="header-judul">Pengaturan</h1>
+
+      <div class="header-kanan">
+        <span class="peran-badge">Mock</span>
+        <div class="peran">
+          <label class="peran-label" for="pilih-peran">Lihat sebagai</label>
+          <select class="peran-pilih" id="pilih-peran" aria-describedby="peran-catatan">
+            <option value="manajer" selected="">Manajer Program</option>
+            <option value="pic">PIC Divisi</option>
+            <option value="me">M&amp;E Officer</option>
+            <option value="pimpinan">Pimpinan / Governing Board</option>
+          </select>
+        </div>
+        <span class="sr-only" id="peran-catatan">Pemilih peran bersifat sementara dan belum mengubah tampilan.</span>
+      </div>
+    </header>
+
+    <main class="isi" id="isi-utama" tabindex="-1">
+
+      <!-- ======================= DASHBOARD ======================= -->
+      
+
+      <!-- ======================= AKTIVITAS ======================= -->
+      
+
+      <!-- ======================= PAPAN KPI ======================= -->
+      
+
+      <!-- ======================= TIMELINE ======================= -->
+      
+
+      <!-- ======================= KERANGKA M&E ======================= -->
+      
+
+      <!-- ======================= PENDANAAN ======================= -->
+      
+
+      <!-- ======================= LAPORAN ======================= -->
+      
+
+      <!-- ======================= PENGATURAN ======================= -->
+      <section class="layar" id="layar-pengaturan" aria-labelledby="judul-pengaturan" data-aktif="">
+        <div class="layar-head">
+          <h2 class="layar-judul" id="judul-pengaturan">Pengaturan</h2>
+          <p class="layar-deskripsi">Kelola profil akun, tampilan, bahasa, dan notifikasi Anda.</p>
+        </div>
+
+        <form id="form-pengaturan-akun">
+          <div class="lp-grid">
+            <div>
+              <div class="panel">
+                <div class="panel-kepala"><h3 class="panel-judul">Profil akun</h3><span class="panel-catatan">Informasi pribadi</span></div>
+                <div class="lp-body lp-stack">
+                  <div class="akun-identitas">
+                    <span class="akun-avatar" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+                    <div><h4 class="panel-judul">Akun Anda</h4><p class="lp-note">Informasi yang ditampilkan pada profil Anda.</p></div>
+                  </div>
+                  <div class="lp-form">
+                    <div class="lp-field"><label class="filter-label" for="akun-nama">Nama lengkap</label><input class="cari" id="akun-nama" name="nama" type="text" autocomplete="name" placeholder="Masukkan nama lengkap"></div>
+                    <div class="lp-field"><label class="filter-label" for="akun-email">Alamat email</label><input class="cari" id="akun-email" name="email" type="email" autocomplete="email" placeholder="nama@contoh.com"></div>
+                    <div class="lp-field"><label class="filter-label" for="akun-divisi">Divisi</label><select class="filter-pilih" id="akun-divisi" name="divisi"><option value="">Pilih divisi</option><option>CPMP</option><option>Training</option><option>R&amp;D</option><option>IT&amp;KM</option><option>Admin &amp; Finance</option></select></div>
+                    <div class="lp-field"><label class="filter-label" for="akun-jabatan">Jabatan</label><input class="cari" id="akun-jabatan" name="jabatan" type="text" autocomplete="organization-title" placeholder="Masukkan jabatan"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel">
+                <div class="panel-kepala"><h3 class="panel-judul">Tampilan dan bahasa</h3><span class="panel-catatan">Preferensi Anda</span></div>
+                <div class="lp-body lp-stack">
+                  <fieldset class="akun-fieldset">
+                    <legend class="filter-label">Tema tampilan</legend>
+                    <div class="akun-tema-grid">
+                      <label class="akun-tema">
+                        <input id="tema-terang" type="radio" name="tema" value="light" checked>
+                        <span class="akun-tema-preview akun-preview-terang" aria-hidden="true"><span class="akun-preview-sidebar"></span><span class="akun-preview-isi"><span></span><span></span><span></span></span></span>
+                        <span class="akun-tema-label"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.2"/><path d="M8 1v1M8 14v1M1 8h1M14 8h1M3 3l.8.8M12.2 12.2l.8.8M13 3l-.8.8M3.8 12.2 3 13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Terang / Light</span>
+                      </label>
+                      <label class="akun-tema">
+                        <input id="tema-gelap" type="radio" name="tema" value="dark">
+                        <span class="akun-tema-preview akun-preview-gelap" aria-hidden="true"><span class="akun-preview-sidebar"></span><span class="akun-preview-isi"><span></span><span></span><span></span></span></span>
+                        <span class="akun-tema-label"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13.7 10A6 6 0 0 1 6 2.3 6 6 0 1 0 13.7 10Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>Gelap / Dark</span>
+                      </label>
+                    </div>
+                  </fieldset>
+                  <div class="lp-field lp-divider"><label class="filter-label" for="akun-bahasa">Bahasa tampilan</label><select class="filter-pilih" id="akun-bahasa" name="bahasa"><option value="id" selected>Bahasa Indonesia</option><option value="en">English</option></select><p class="lp-note">Pilih bahasa yang ingin digunakan pada aplikasi.</p></div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="panel">
+                <div class="panel-kepala"><h3 class="panel-judul">Notifikasi</h3><span class="panel-catatan">Melalui email</span></div>
+                <div class="lp-body lp-stack">
+                  <p class="lp-note">Pilih pemberitahuan yang ingin Anda terima.</p>
+                  <label class="lp-check"><input type="checkbox" name="notifikasi-aktivitas" checked><span>Pembaruan aktivitas<span class="akun-check-note">Perubahan status aktivitas pada divisi Anda.</span></span></label>
+                  <label class="lp-check"><input type="checkbox" name="notifikasi-review" checked><span>Pengingat review<span class="akun-check-note">Pengingat jadwal review dan penyusunan laporan.</span></span></label>
+                  <label class="lp-check"><input type="checkbox" name="notifikasi-ringkasan"><span>Ringkasan mingguan<span class="akun-check-note">Ringkasan progres program setiap minggu.</span></span></label>
+                </div>
+              </div>
+
+              <div class="panel">
+                <div class="panel-kepala"><h3 class="panel-judul">Keamanan akun</h3></div>
+                <div class="lp-body lp-stack">
+                  <div><h4 class="panel-judul">Kata sandi</h4><p class="lp-note">Perbarui kata sandi untuk menjaga akses akun Anda.</p></div>
+                  <button type="button" class="tombol akun-tombol">Ubah kata sandi</button>
+                  <div class="lp-divider"><h4 class="panel-judul">Keluar dari akun</h4><p class="lp-note">Akhiri sesi setelah selesai menggunakan aplikasi.</p></div>
+                  <button type="button" class="tombol akun-tombol">Keluar dari akun</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="akun-footer">
+            <p class="lp-note">Pratinjau pengaturan akun. Tema dapat dicoba; bahasa, penyimpanan, dan tindakan akun belum aktif.</p>
+            <div class="lp-actions"><button type="reset" class="tombol">Reset perubahan</button><button type="button" class="tombol tombol-utama">Simpan perubahan</button></div>
+          </div>
+        </form>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ======================= DRAWER DETAIL AKTIVITAS ======================= -->
+<div class="tirai" id="tirai" hidden=""></div>
+
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-judul" hidden="">
+  <div class="drawer-kepala">
+    <div style="min-width: 0;">
+      <p class="drawer-kode" id="drawer-kode"></p>
+      <h2 class="drawer-judul" id="drawer-judul"></h2>
+    </div>
+    <button type="button" class="tombol-silang" id="drawer-tutup" aria-label="Tutup panel detail">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path></svg>
+    </button>
+  </div>
+
+  <div class="drawer-isi" id="drawer-isi"></div>
+</aside>
+
+
+
+
+
+</body></html>
