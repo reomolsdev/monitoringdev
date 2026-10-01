@@ -1,0 +1,4604 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SEAMOLEC Monitoring Program — Kerangka Aplikasi</title>
+<style>
+  /* ==============================================================
+     TOKEN DESAIN
+     Skala spasi kelipatan 4px.
+     Hanya dua bobot: 400 (regular) dan 500 (medium).
+     ============================================================== */
+  :root {
+    /* -- spasi (kelipatan 4) -- */
+    --s-1: 4px;
+    --s-2: 8px;
+    --s-3: 12px;
+    --s-4: 16px;
+    --s-5: 20px;
+    --s-6: 24px;
+    --s-8: 32px;
+    --s-10: 40px;
+
+    /* -- warna -- */
+    --biru: #185FA5;          /* utama institusional */
+    --biru-lembut: #E6F1FB;   /* latar lembut */
+    --biru-garis: #BBD8EF;
+    --netral-latar: #F7F9FB;  /* hampir putih */
+    --putih: #FFFFFF;
+    --teks: #1C2A36;
+    --teks-redup: #5A6B7A;
+    /* --teks-samar dipakai untuk label kecil & teks sekunder. Nilai lamanya
+       (#8494A2) hanya mencapai 3,12:1 di atas putih — di bawah ambang WCAG AA
+       4,5:1. Digelapkan ke #64757F yang mencapai 4,78:1 di atas putih dan
+       tetap lolos di atas latar netral maupun biru lembut. */
+    --teks-samar: #64757F;
+    --garis: #E1E7ED;
+    --garis-kuat: #C9D3DC;
+    --abu-placeholder: #EDF1F5;
+    --abu-placeholder-garis: #DDE4EB;
+
+    /* -- warna status (WAJIB konsisten) -- */
+    /* Latar status tetap sesuai ketentuan. Teks "On track" digelapkan dari
+       #9C6500 -> #8A5800 karena di atas #FFEB9C nilai lama hanya 4,12:1
+       (gagal WCAG AA). Warna lain sudah lolos dan tidak diubah. */
+    --st-hijau-bg: #C6EFCE; --st-hijau-teks: #006100; /* Selesai / Tercapai 6,14:1 */
+    --st-kuning-bg: #FFEB9C; --st-kuning-teks: #8A5800; /* On track 5,07:1 */
+    --st-merah-bg: #FFC7CE; --st-merah-teks: #9C0006;   /* Perlu perhatian / Ditunda 5,92:1 */
+    --st-netral-bg: #F1EFE8; --st-netral-teks: #5F5E5A; /* Belum mulai / Belum ada data 5,64:1 */
+
+    /* -- bentuk & gerak -- */
+    --r-kecil: 8px;
+    --r-besar: 12px;
+    --garis-tipis: 0.5px;
+    --transisi: 120ms ease;
+
+    /* -- ukuran -- */
+    --lebar-sidebar: 248px;
+    --tinggi-header: 64px;
+  }
+
+  /* ==============================================================
+     DASAR
+     ============================================================== */
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html { height: 100%; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.55;
+    color: var(--teks);
+    background: var(--netral-latar);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, p { margin: 0; }
+  h1, h2, h3 { font-weight: 500; }
+
+  /* Label yang hanya terbaca pembaca layar */
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Satu gaya fokus untuk seluruh kontrol.
+     Dipakai garis biru 2px DI LUAR elemen ditambah garis putih 1px di
+     dalamnya, supaya tetap terlihat di atas latar terang maupun di atas
+     latar biru lembut (mis. kartu tonggak berjalan). */
+  a:focus-visible,
+  button:focus-visible,
+  select:focus-visible,
+  input:focus-visible,
+  summary:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid var(--biru);
+    outline-offset: 2px;
+    border-radius: var(--r-kecil);
+  }
+
+  /* Elemen di dalam area bergulir gelap/berwarna tetap terbaca karena
+     outline diberi offset positif sehingga jatuh di atas latar induk. */
+  .kartu:focus-within,
+  .tonggak-kartu:focus-within {
+    outline: 1px solid var(--biru);
+    outline-offset: 2px;
+  }
+
+  /* Tautan lewati-ke-konten: muncul hanya saat difokus dengan Tab. */
+  .lewati {
+    position: absolute;
+    left: var(--s-4);
+    top: -100px;
+    z-index: 100;
+    padding: var(--s-2) var(--s-4);
+    border-radius: var(--r-kecil);
+    background: var(--biru);
+    color: var(--putih);
+    font-size: 13px;
+    text-decoration: none;
+    transition: top var(--transisi);
+  }
+
+  .lewati:focus { top: var(--s-4); }
+
+  /* ==============================================================
+     KERANGKA — sidebar tetap + area konten
+     ============================================================== */
+  .app {
+    display: grid;
+    grid-template-columns: var(--lebar-sidebar) minmax(0, 1fr);
+    min-height: 100vh;
+  }
+
+  /* ---------------- Sidebar ---------------- */
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-6);
+    padding: var(--s-5) var(--s-3);
+    background: var(--putih);
+    border-right: var(--garis-tipis) solid var(--garis);
+  }
+
+  .merek {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    padding: 0 var(--s-3);
+  }
+
+  .merek-lambang {
+    flex: none;
+    width: 32px; height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--r-kecil);
+    background: var(--biru);
+    color: var(--putih);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .merek-teks { min-width: 0; }
+
+  .merek-nama {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.3;
+    display: block;
+  }
+
+  .merek-sub {
+    font-size: 11px;
+    color: var(--teks-samar);
+    line-height: 1.3;
+    display: block;
+  }
+
+  .nav { flex: 1 1 auto; overflow-y: auto; }
+
+  .nav-judul {
+    padding: 0 var(--s-3) var(--s-2);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--teks-samar);
+  }
+
+  .nav-daftar {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    width: 100%;
+    padding: var(--s-2) var(--s-3);
+    border: 0;
+    border-radius: var(--r-kecil);
+    background: transparent;
+    color: var(--teks-redup);
+    font: inherit;
+    font-weight: 400;
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--transisi), color var(--transisi);
+  }
+
+  .nav-item:hover { background: var(--netral-latar); color: var(--teks); }
+
+  .nav-item[aria-current="page"] {
+    background: var(--biru-lembut);
+    color: var(--biru);
+    font-weight: 500;
+  }
+
+  .nav-ikon { flex: none; width: 16px; height: 16px; }
+
+  .sidebar-kaki {
+    padding: var(--s-3) var(--s-3) 0;
+    border-top: var(--garis-tipis) solid var(--garis);
+    font-size: 11px;
+    color: var(--teks-samar);
+  }
+
+  /* ---------------- Area konten ---------------- */
+  .utama { min-width: 0; display: flex; flex-direction: column; }
+
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-4);
+    height: var(--tinggi-header);
+    padding: 0 var(--s-8);
+    background: var(--putih);
+    border-bottom: var(--garis-tipis) solid var(--garis);
+  }
+
+  .header-judul { font-size: 18px; }
+
+  .header-kanan {
+    display: flex;
+    align-items: center;
+    gap: var(--s-4);
+  }
+
+  .peran {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+  }
+
+  .peran-label {
+    font-size: 12px;
+    color: var(--teks-redup);
+  }
+
+  .peran-pilih,
+  .filter-pilih {
+    height: 32px;
+    padding: 0 var(--s-3);
+    border: var(--garis-tipis) solid var(--garis-kuat);
+    border-radius: var(--r-kecil);
+    background: var(--putih);
+    color: var(--teks);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .peran-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 var(--s-3);
+    border-radius: var(--r-kecil);
+    background: var(--biru-lembut);
+    color: var(--biru);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .isi { flex: 1 1 auto; padding: var(--s-8); }
+
+  /* Setiap layar disembunyikan kecuali yang aktif */
+  .layar { display: none; }
+  .layar[data-aktif] { display: block; }
+
+  .layar-head { margin-bottom: var(--s-6); }
+
+  .layar-judul { font-size: 20px; margin-bottom: var(--s-1); }
+
+  .layar-deskripsi { color: var(--teks-redup); max-width: 68ch; }
+
+  /* ---------------- Placeholder abu-abu ---------------- */
+  .placeholder-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--s-4);
+  }
+
+  .placeholder {
+    grid-column: span 12;
+    min-height: 160px;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--s-2);
+    padding: var(--s-5);
+    border: var(--garis-tipis) dashed var(--abu-placeholder-garis);
+    border-radius: var(--r-besar);
+    background: var(--abu-placeholder);
+    color: var(--teks-samar);
+    font-size: 12px;
+  }
+
+  .placeholder-tag {
+    flex: none;
+    padding: 2px var(--s-2);
+    border-radius: var(--r-kecil);
+    background: var(--putih);
+    border: var(--garis-tipis) solid var(--abu-placeholder-garis);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .p-6 { grid-column: span 6; }
+
+  /* ==============================================================
+     KOMPONEN DASHBOARD
+     ============================================================== */
+
+  /* -- Baris filter periode -- */
+  .bilah-filter {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--s-4);
+    flex-wrap: wrap;
+    margin-bottom: var(--s-6);
+    padding: var(--s-4);
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-besar);
+    background: var(--putih);
+  }
+
+  .filter-grup {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+  }
+
+  /* Tinggi 32px untuk label + kontrol, dengan label dikunci setinggi 16px
+     agar semua kontrol di baris ini rata pada garis yang sama. */
+  .filter-medan {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--s-1);
+    flex: none;
+  }
+
+  /* Lebar tiap dropdown ditetapkan eksplisit — jangan biarkan <select>
+     menentukan lebarnya sendiri, karena teks opsi terpanjang akan
+     melebarkan seluruh baris dan mendorong kotak Cari keluar. */
+  .filter-medan { width: 168px; }
+  .filter-medan:nth-child(3) { width: 196px; }  /* Pilar — memuat "T - Capacity Building" */
+  .filter-medan:nth-child(1) { width: 188px; }  /* Flagship — memuat nama penuh + kode */
+
+  .filter-label { flex: none; line-height: 16px; }
+
+  /* Cari diberi lebar tetap agar sejajar dengan dropdown,
+     bukan melebar memenuhi baris. */
+  .filter-medan-cari { width: 268px; }
+  .filter-medan-cari .cari { width: 100%; flex: none; min-width: 0; }
+
+  /* Di bawah 1280px medan filter dibiarkan menyesuaikan lebar kolom,
+     bukan lebar tetap, supaya tidak meluber keluar kartu. */
+  @media (max-width: 1279px) {
+    .filter-medan,
+    .filter-medan:nth-child(1),
+    .filter-medan:nth-child(3) { width: 160px; }
+    .filter-medan-cari { width: 220px; }
+  }
+
+  /* Di bawah 768px semua kontrol filter menjadi satu kolom penuh. */
+  @media (max-width: 767px) {
+    .bilah-filter { align-items: stretch; }
+    .filter-grup { flex-direction: column; align-items: stretch; gap: var(--s-3); }
+    .filter-medan,
+    .filter-medan:nth-child(1),
+    .filter-medan:nth-child(3),
+    .filter-medan-cari { width: 100%; }
+  }
+
+  .filter-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--teks-samar);
+  }
+
+  .tombol {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    height: 32px;
+    padding: 0 var(--s-4);
+    border: var(--garis-tipis) solid var(--garis-kuat);
+    border-radius: var(--r-kecil);
+    background: var(--putih);
+    color: var(--teks);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background var(--transisi), border-color var(--transisi);
+  }
+
+  .tombol:hover { background: var(--netral-latar); border-color: var(--teks-samar); }
+
+  .tombol-utama {
+    background: var(--biru);
+    border-color: var(--biru);
+    color: var(--putih);
+  }
+
+  .tombol-utama:hover { background: #14528F; border-color: #14528F; }
+
+  /* Varian sekunder — eksplisit, supaya ".tombol.tombol-biasa" tidak
+     bergantung pada gaya bawaan .tombol saja. */
+  .tombol-biasa { background: var(--putih); border-color: var(--garis-kuat); color: var(--teks); }
+
+  .filter-catatan {
+    margin-top: var(--s-2);
+    font-size: 11px;
+    color: var(--teks-samar);
+    flex-basis: 100%;
+  }
+
+  /* -- Pill status -- */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-1);
+    padding: 2px var(--s-2);
+    border-radius: var(--r-kecil);
+    border: var(--garis-tipis) solid rgba(28, 42, 54, 0.12);
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .pill-selesai  { background: var(--st-hijau-bg);  color: var(--st-hijau-teks); }
+  .pill-ontrack  { background: var(--st-kuning-bg); color: var(--st-kuning-teks); }
+  .pill-perhatian{ background: var(--st-merah-bg);  color: var(--st-merah-teks); }
+  .pill-netral   { background: var(--st-netral-bg); color: var(--st-netral-teks); }
+
+  .pill-titik {
+    flex: none;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* -- Bilah progres -- */
+  .bilah {
+    position: relative;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--abu-placeholder);
+    overflow: hidden;
+  }
+
+  .bilah-isi {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--biru);
+  }
+
+  .bilah-tanpa { background: var(--garis-kuat); }
+
+  /* -- Kartu SMART -- */
+  /* -- Kartu SMART --
+     Titik henti sesuai ketentuan: >=1280px tiga kolom, 768-1279px dua
+     kolom, <768px satu kolom. Lima kartu pertama kali direntang penuh
+     pada layar sangat lebar, lalu menyusut bertahap. */
+  .grid-smart {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--s-4);
+    margin-bottom: var(--s-6);
+  }
+
+  @media (min-width: 1280px) {
+    .grid-smart { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+
+  @media (min-width: 1680px) {
+    .grid-smart { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 1279px) and (min-width: 768px) {
+    .grid-smart { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 767px) {
+    .grid-smart { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  .kartu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    padding: var(--s-4);
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-besar);
+    background: var(--putih);
+  }
+
+  .kartu-kepala {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2);
+  }
+
+  .kartu-kode {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--teks-samar);
+  }
+
+  .kartu-nilai {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-2);
+    font-size: 26px;
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+
+  .kartu-satuan {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--teks-redup);
+  }
+
+  .kartu-keterangan {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--teks-redup);
+    min-height: 36px;
+  }
+
+  .kartu-kaki {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    margin-top: auto;
+  }
+
+  .kartu-capaian {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2);
+    font-size: 11px;
+    color: var(--teks-samar);
+  }
+
+  /* -- Panel -- */
+  .panel {
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-besar);
+    background: var(--putih);
+    margin-bottom: var(--s-6);
+    overflow: hidden;
+  }
+
+  .panel-kepala {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--s-4);
+    padding: var(--s-4) var(--s-5);
+    border-bottom: var(--garis-tipis) solid var(--garis);
+  }
+
+  .panel-judul { font-size: 15px; }
+
+  .panel-catatan { font-size: 12px; color: var(--teks-samar); }
+
+  /* -- Daftar progres flagship -- */
+  .flagship-daftar { list-style: none; margin: 0; padding: 0; }
+
+  .flagship-baris {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) 88px 96px minmax(120px, 1fr) 84px;
+    align-items: center;
+    gap: var(--s-4);
+    padding: var(--s-3) var(--s-5);
+    border-bottom: var(--garis-tipis) solid var(--garis);
+  }
+
+  .flagship-daftar > li:last-child .flagship-baris { border-bottom: 0; }
+
+  .flagship-baris:hover { background: var(--netral-latar); }
+
+  .flagship-identitas { min-width: 0; }
+
+  .flagship-akronim {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  .flagship-nama {
+    font-size: 11px;
+    color: var(--teks-samar);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .kode-strategi {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 var(--s-2);
+    border-radius: var(--r-kecil);
+    background: var(--biru-lembut);
+    color: var(--biru);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .flagship-divisi {
+    font-size: 12px;
+    color: var(--teks-redup);
+    overflow-wrap: anywhere;
+  }
+
+  .flagship-pecahan {
+    font-size: 12px;
+    color: var(--teks-redup);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .flagship-pecahan b { font-weight: 500; color: var(--teks); }
+
+  /* -- Daftar perlu perhatian -- */
+  .risiko-daftar { list-style: none; margin: 0; padding: 0; }
+
+  .risiko-baris {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: var(--s-2) var(--s-4);
+    padding: var(--s-3) var(--s-5);
+    border-bottom: var(--garis-tipis) solid var(--garis);
+  }
+
+  .risiko-daftar > li:last-child .risiko-baris { border-bottom: 0; }
+
+  .risiko-nama {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .risiko-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--s-1) var(--s-3);
+    margin-top: var(--s-1);
+    font-size: 11px;
+    color: var(--teks-samar);
+  }
+
+  .risiko-meta span { display: inline-flex; align-items: center; gap: var(--s-1); }
+
+  /* ==============================================================
+     HALAMAN AKTIVITAS
+     ============================================================== */
+
+  /* -- FilterBar -- */
+  .filterbar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    margin-bottom: var(--s-4);
+    padding: var(--s-4);
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-besar);
+    background: var(--putih);
+  }
+
+  .filterbar-baris {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+  }
+
+  .filterbar-baris-2 {
+    justify-content: space-between;
+    padding-top: var(--s-3);
+    border-top: var(--garis-tipis) solid var(--garis);
+  }
+
+  .cari {
+    min-width: 160px;
+    height: 32px;
+    padding: 0 var(--s-3);
+    border: var(--garis-tipis) solid var(--garis-kuat);
+    border-radius: var(--r-kecil);
+    background: var(--putih);
+    color: var(--teks);
+    font: inherit;
+    font-size: 13px;
+  }
+
+  .cari::placeholder { color: var(--teks-samar); }
+
+  .filter-hitung {
+    font-size: 12px;
+    color: var(--teks-redup);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .filter-hitung b { font-weight: 500; color: var(--teks); }
+
+  .filter-aksi { display: flex; align-items: center; gap: var(--s-3); }
+
+  /* Label pilar yang panjang ("T - Capacity Building") tidak boleh
+     terpotong di tengah kata; beri ruang dan larang pemenggalan kata. */
+  .pilar-sel span:last-child {
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: keep-all;
+  }
+
+  /* -- Tabel -- */
+  .tabel-bungkus {
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-besar);
+    background: var(--putih);
+  }
+
+  /* CATATAN PENTING soal header lengket:
+     Menetapkan overflow-x: auto otomatis membuat overflow-y menjadi auto
+     juga (spesifikasi CSS: sumbu lain tidak boleh "visible" bila salah satu
+     bukan visible). Artinya elemen ini SENDIRI menjadi scroll container —
+     dan karena tingginya hanya setinggi isi tabel, ia tidak pernah
+     menggulir vertikal, sehingga position: sticky pada <th> tidak punya
+     acuan untuk melekat.
+     Solusinya: jadikan wadah ini juga penggulir vertikal dengan tinggi
+     terbatas, sehingga header melekat di dalamnya saat 80 baris digulir. */
+  .tabel-gulir {
+    overflow: auto;
+    max-height: calc(100vh - 260px);
+    min-height: 320px;
+    border-radius: inherit;
+    overscroll-behavior: contain;
+  }
+
+  /* Di layar sempit batang gulir mendatar tidak boleh memakan tinggi
+     berlebih, dan header melekat dihitung ulang setelah menu atas. */
+  @media (max-width: 767px) {
+    .tabel-gulir { max-height: calc(100vh - 300px); min-height: 260px; }
+    .tabel { font-size: 12.5px; }
+  }
+
+  .tabel {
+    width: 100%;
+    min-width: 1180px;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+  }
+
+  .tabel caption {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .tabel thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 0;
+    background: var(--putih);
+    border-bottom: var(--garis-tipis) solid var(--garis-kuat);
+    text-align: left;
+    white-space: nowrap;
+    /* Bayangan tipis hanya saat header terlepas dari atas tabel —
+       satu garis rambut, bukan bayangan berlapis. */
+    box-shadow: 0 1px 0 var(--garis);
+  }
+
+  .tabel thead th:first-child { border-top-left-radius: var(--r-besar); }
+  .tabel thead th:last-child { border-top-right-radius: var(--r-besar); }
+
+  .urut-tombol {
+    display: flex;
+    align-items: center;
+    gap: var(--s-1);
+    width: 100%;
+    padding: var(--s-3) var(--s-3);
+    border: 0;
+    background: transparent;
+    color: var(--teks-redup);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .urut-tombol:hover { background: var(--netral-latar); color: var(--teks); }
+
+  .urut-tombol[aria-sort="ascending"],
+  .urut-tombol[aria-sort="descending"] { color: var(--biru); }
+
+  .urut-ikon { flex: none; width: 10px; height: 10px; opacity: 0.4; }
+  .urut-tombol[aria-sort="ascending"] .urut-ikon,
+  .urut-tombol[aria-sort="descending"] .urut-ikon { opacity: 1; }
+
+  .tabel tbody td {
+    padding: var(--s-3);
+    border-bottom: var(--garis-tipis) solid var(--garis);
+    vertical-align: top;
+    /* Teks membungkus antar-kata, tidak terpotong. "break-word" dipakai
+       (bukan "anywhere") supaya kolom pendek dapat membungkus pada spasi
+       tanpa memenggal nama di tengah kata, mis. "Arie / Susanty". */
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  .tabel tbody tr:last-child td { border-bottom: 0; }
+
+  .tabel tbody tr { cursor: pointer; }
+  .tabel tbody tr:hover td { background: var(--netral-latar); }
+  .tabel tbody tr[data-terpilih] td { background: var(--biru-lembut); }
+
+  /* Penanda halus di sisi kiri untuk status perlu perhatian / ditunda */
+  .tabel tbody tr[data-risiko] td:first-child { position: relative; }
+
+  .tabel tbody tr[data-risiko] td:first-child::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--st-merah-teks);
+    opacity: 0.65;
+  }
+
+  /* Lebar kolom */
+  .k-no      { width: 52px; }
+  .k-flag    { width: 88px; }
+  .k-komp    { width: 168px; }
+  .k-kode    { width: 68px; }
+  .k-akt     { min-width: 260px; }
+  .k-pilar   { width: 168px; }
+  .k-div     { width: 104px; }
+  .k-pic     { width: 140px; }
+  .k-stat    { width: 148px; }
+  .k-cat     { min-width: 180px; }
+
+  /* Nama PIC cukup pendek: biarkan utuh dalam satu baris, jangan
+     dipenggal di tengah kata. */
+  .k-pic, .k-kode, .k-div { white-space: nowrap; overflow-wrap: normal; }
+
+  .td-no { color: var(--teks-samar); font-variant-numeric: tabular-nums; }
+  .td-sub { color: var(--teks-redup); font-size: 12px; }
+
+  /* Nilai yang belum ada di sumber: ditampilkan dengan warna teks sekunder
+     dan huruf miring supaya jelas bedanya dari data sungguhan. */
+  .td-kosong, .teks-kosong { color: var(--teks-samar); font-style: italic; font-size: 12px; }
+
+  .td-flag {
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--biru);
+  }
+
+  .td-aktivitas { font-weight: 500; }
+
+  .pilar-tanda {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 18px; height: 18px;
+    border-radius: var(--r-kecil);
+    background: var(--biru-lembut);
+    color: var(--biru);
+    font-size: 10px;
+    font-weight: 500;
+  }
+
+  /* -- Pilar: kode + nama lengkap, nama tidak terpotong di tengah kata -- */
+  .pilar-sel {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    font-size: 12px;
+  }
+
+  /* Nama pilar dibungkus dalam <span> sendiri supaya bisa dilarang
+     memenggal kata ("Cap/acity/Buil/ding"), sedangkan kolomnya tetap
+     boleh membungkus antar-kata bila ruang sempit. */
+  .pilar-nama { white-space: nowrap; }
+
+  @media (max-width: 1279px) {
+    .pilar-nama { white-space: normal; overflow-wrap: break-word; word-break: normal; }
+  }
+
+  /* -- Tombol pill status di dalam tabel -- */
+  .pill-tombol {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-1);
+    padding: 3px var(--s-2);
+    border: var(--garis-tipis) solid rgba(28, 42, 54, 0.18);
+    border-radius: var(--r-kecil);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: filter var(--transisi);
+  }
+
+  .pill-tombol:hover { filter: brightness(0.95); }
+
+  .pill-tombol .pill-panah { opacity: 0.55; font-size: 9px; }
+
+  /* -- Empty state --
+     Gaya .kosong / .kosong-ikon / .kosong-judul / .kosong-teks ditetapkan
+     satu kali di blok "EMPTYSTATE" (lihat bagian bawah stylesheet) supaya
+     tidak ada dua definisi yang saling menimpa. */
+
+  /* -- Drawer detail -- */
+  .tirai {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    background: rgba(28, 42, 54, 0.32);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 160ms ease, visibility 160ms ease;
+  }
+
+  .tirai[data-buka] { opacity: 1; visibility: visible; }
+
+  .drawer {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    z-index: 11;
+    width: min(520px, 100vw);
+    display: flex;
+    flex-direction: column;
+    background: var(--putih);
+    border-left: var(--garis-tipis) solid var(--garis-kuat);
+    transform: translateX(100%);
+    visibility: hidden;
+    transition: transform 180ms ease, visibility 180ms ease;
+  }
+
+  .drawer[data-buka] { transform: translateX(0); visibility: visible; }
+
+  /* Di layar sempit drawer memakai seluruh lebar layar. */
+  @media (max-width: 767px) {
+    .drawer { width: 100vw; border-left: 0; }
+  }
+
+  .drawer-kepala {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--s-4);
+    padding: var(--s-5) var(--s-5) var(--s-4);
+    border-bottom: var(--garis-tipis) solid var(--garis);
+  }
+
+  .drawer-kode {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--teks-samar);
+    margin-bottom: var(--s-1);
+  }
+
+  .drawer-judul { font-size: 16px; line-height: 1.4; }
+
+  .tombol-silang {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 32px; height: 32px;
+    padding: 0;
+    border: var(--garis-tipis) solid var(--garis-kuat);
+    border-radius: var(--r-kecil);
+    background: var(--putih);
+    color: var(--teks-redup);
+    cursor: pointer;
+  }
+
+  .tombol-silang:hover { background: var(--netral-latar); color: var(--teks); }
+
+  .drawer-isi {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: var(--s-5);
+  }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: 132px minmax(0, 1fr);
+    gap: var(--s-3) var(--s-4);
+    margin-bottom: var(--s-6);
+  }
+
+  .field-nama {
+    font-size: 12px;
+    color: var(--teks-samar);
+  }
+
+  .field-nilai {
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+
+  .field-nilai.kosong { color: var(--teks-samar); font-style: italic; }
+
+  .drawer-bagian {
+    margin-bottom: var(--s-6);
+    padding-top: var(--s-5);
+    border-top: var(--garis-tipis) solid var(--garis);
+  }
+
+  .drawer-bagian:last-child { margin-bottom: 0; }
+
+  .drawer-subjudul {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--teks-redup);
+    margin-bottom: var(--s-3);
+  }
+
+  .riwayat-daftar { list-style: none; margin: 0; padding: 0; }
+
+  .riwayat-item {
+    padding: var(--s-3) 0;
+    border-bottom: var(--garis-tipis) solid var(--garis);
+  }
+
+  .riwayat-item:last-child { border-bottom: 0; }
+
+  .riwayat-atas {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    flex-wrap: wrap;
+    margin-bottom: var(--s-1);
+    font-size: 12px;
+  }
+
+  .riwayat-waktu { color: var(--teks-samar); }
+  .riwayat-panah { color: var(--teks-samar); }
+  .riwayat-komentar { font-size: 12px; color: var(--teks-redup); }
+
+  .kendala-kotak {
+    padding: var(--s-4);
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-kecil);
+    background: var(--netral-latar);
+    font-size: 13px;
+    color: var(--teks-redup);
+  }
+
+  .tindak-baris {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3);
+    padding: var(--s-3);
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-kecil);
+  }
+
+  .tindak-teks { font-size: 12px; color: var(--teks-redup); }
+
+  /* -- Menu pemilih status -- */
+  .menu-status {
+    position: fixed;
+    z-index: 20;
+    min-width: 176px;
+    padding: var(--s-1);
+    border: var(--garis-tipis) solid var(--garis-kuat);
+    border-radius: var(--r-kecil);
+    background: var(--putih);
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .menu-opsi {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    width: 100%;
+    padding: var(--s-2) var(--s-3);
+    border: 0;
+    border-radius: var(--r-kecil);
+    background: transparent;
+    color: var(--teks);
+    font: inherit;
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .menu-opsi:hover { background: var(--netral-latar); }
+
+  .menu-opsi[aria-selected="true"] { background: var(--biru-lembut); font-weight: 500; color: var(--biru); }
+
+  .menu-titik {
+    flex: none;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  .menu-titik.pill-selesai { background: var(--st-hijau-bg); box-shadow: inset 0 0 0 1px var(--st-hijau-teks); }
+  .menu-titik.pill-ontrack { background: var(--st-kuning-bg); box-shadow: inset 0 0 0 1px var(--st-kuning-teks); }
+  .menu-titik.pill-perhatian { background: var(--st-merah-bg); box-shadow: inset 0 0 0 1px var(--st-merah-teks); }
+  .menu-titik.pill-netral { background: var(--st-netral-bg); box-shadow: inset 0 0 0 1px var(--st-netral-teks); }
+
+  .menu-opsi-kosong {
+    border-top: var(--garis-tipis) solid var(--garis);
+    border-radius: 0 0 var(--r-kecil) var(--r-kecil);
+    margin-top: 1px;
+    color: var(--teks-redup);
+    font-style: italic;
+  }
+
+  @media (max-width: 767px) {
+    .field-grid { grid-template-columns: minmax(0, 1fr); gap: var(--s-1) 0; }
+    .field-nama { margin-top: var(--s-2); }
+  }
+
+  @media (max-width: 1279px) {
+    .flagship-baris {
+      grid-template-columns: minmax(0, 1fr) 88px;
+      grid-template-areas:
+        "identitas kode"
+        "divisi divisi"
+        "bilah bilah"
+        "pecahan pecahan";
+      gap: var(--s-2) var(--s-3);
+    }
+    .flagship-baris > .flagship-identitas { grid-area: identitas; }
+    .flagship-baris > .kode-strategi { grid-area: kode; justify-self: end; }
+    .flagship-baris > .flagship-divisi { grid-area: divisi; }
+    .flagship-baris > .bilah { grid-area: bilah; }
+    .flagship-baris > .flagship-pecahan { grid-area: pecahan; text-align: left; }
+  }
+
+  /* --------------------------------------------------------------
+     Di bawah 768px sidebar berubah menjadi menu atas: merek + deretan
+     tombol navigasi yang bisa digulir mendatar. Tidak lagi position:
+     sticky / height: 100vh supaya tidak menutupi konten.
+     -------------------------------------------------------------- */
+  @media (max-width: 767px) {
+    .app { grid-template-columns: minmax(0, 1fr); }
+
+    .sidebar {
+      position: static;
+      height: auto;
+      flex-direction: row;
+      align-items: center;
+      gap: var(--s-4);
+      padding: var(--s-3);
+      border-right: 0;
+      border-bottom: var(--garis-tipis) solid var(--garis);
+    }
+
+    .merek { flex: none; padding: 0; }
+    .merek-sub { display: none; }
+
+    .nav { flex: 1 1 auto; overflow: visible; }
+    .nav-judul { display: none; }
+
+    .nav-daftar {
+      flex-direction: row;
+      gap: var(--s-1);
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scrollbar-width: thin;
+      padding-bottom: 2px;
+    }
+
+    .nav-item {
+      width: auto;
+      flex: none;
+      gap: var(--s-2);
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .sidebar-kaki { display: none; }
+
+    .isi, .header { padding-left: var(--s-4); padding-right: var(--s-4); }
+    .p-6 { grid-column: span 12; }
+  }
+
+  /* ==============================================================
+     PAPAN KPI
+     ============================================================== */
+
+  .kpi-grup { margin-bottom: var(--s-8); }
+
+  .kpi-grup-kepala {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--s-3);
+  }
+
+  .kpi-grup-judul {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--teks);
+  }
+
+  .kpi-grup-catatan {
+    font-size: 12px;
+    color: var(--teks-samar);
+  }
+
+  /* Tabel KPI: dua kolom angka dikunci agar sejajar antar-baris. */
+  .tabel-kpi { min-width: 1080px; table-layout: fixed; }
+  .tabel-kpi th, .tabel-kpi td { white-space: normal; overflow-wrap: break-word; }
+
+  .kk-kat    { width: 96px; }
+  .kk-prog   { width: 200px; }
+  .kk-rumus  { min-width: 300px; }
+  .kk-target { width: 108px; text-align: right; }
+  .kk-satuan { width: 96px; }
+  .kk-real   { width: 140px; }
+  .kk-capa   { width: 92px; text-align: right; }
+  .kk-stat   { width: 140px; }
+
+  .tabel-kpi th.kk-target, .tabel-kpi th.kk-capa { text-align: right; }
+  .tabel-kpi th.kk-target .urut-tombol,
+  .tabel-kpi th.kk-capa .urut-tombol { justify-content: flex-end; }
+
+  .td-angka { font-variant-numeric: tabular-nums; font-weight: 500; }
+  .td-capaian { font-variant-numeric: tabular-nums; font-weight: 500; }
+
+  /* Tanda pisah untuk nilai yang belum ada — sengaja netral, bukan "0". */
+  .tanda-kosong {
+    color: var(--teks-samar);
+    font-weight: 400;
+  }
+
+  .td-program {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .td-program-kode {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--biru);
+  }
+
+  /* Kolom realisasi: input angka tanpa bingkai sampai difokus/disentuh. */
+  .realisasi-bungkus {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+  }
+
+  .realisasi-input {
+    width: 84px;
+    height: 30px;
+    padding: 0 var(--s-2);
+    border: var(--garis-tipis) solid var(--garis-kuat);
+    border-radius: var(--r-kecil);
+    background: var(--putih);
+    color: var(--teks);
+    font: inherit;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .realisasi-input::placeholder { color: var(--teks-samar); }
+
+  .realisasi-input:focus-visible {
+    outline: 2px solid var(--biru);
+    outline-offset: 1px;
+    border-color: var(--biru);
+  }
+
+  .realisasi-input[aria-invalid="true"] {
+    border-color: var(--st-merah-teks);
+    background: var(--st-merah-bg);
+    color: var(--st-merah-teks);
+  }
+
+  .realisasi-galat {
+    font-size: 11px;
+    color: var(--st-merah-teks);
+  }
+
+  .kpi-kaki {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+    margin-bottom: var(--s-4);
+  }
+
+  .kpi-ringkas {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--teks-redup);
+  }
+
+  /* ==============================================================
+     TIMELINE MILESTONE
+     ============================================================== */
+
+  .linimasa {
+    position: relative;
+    margin: 0;
+    padding: 0 0 0 var(--s-8);
+    list-style: none;
+  }
+
+  /* Garis vertikal: berjalan dari titik tonggak pertama sampai titik
+     tonggak terakhir. Ditutup di ujung bawah agar tidak menggantung. */
+  .linimasa::before {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 14px;
+    bottom: 14px;
+    width: 2px;
+    background: var(--garis-kuat);
+  }
+
+  .tonggak {
+    position: relative;
+    padding: 0 0 var(--s-6) 0;
+  }
+
+  .tonggak:last-child { padding-bottom: 0; }
+
+  /* Titik penanda pada garis */
+  .tonggak-titik {
+    position: absolute;
+    left: calc(-1 * var(--s-8) + 8px);
+    top: 8px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--putih);
+    background: var(--garis-kuat);
+    box-shadow: 0 0 0 1px var(--garis-kuat);
+  }
+
+  .tonggak-kartu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    padding: var(--s-4);
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-besar);
+    background: var(--putih);
+  }
+
+  .tonggak-kepala {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+  }
+
+  .tonggak-tahun {
+    font-size: 18px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  /* Penanda periode — teks selalu ada, warna hanya pelengkap. */
+  .periode-tanda {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-1);
+    padding: 2px var(--s-2);
+    border: var(--garis-tipis) solid var(--garis-kuat);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--teks-redup);
+    background: var(--putih);
+  }
+
+  .periode-tanda::before {
+    content: "";
+    flex: none;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .tonggak-isi {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+  }
+
+  .tonggak-baris {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: var(--s-2) var(--s-3);
+    align-items: start;
+  }
+
+  .tonggak-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--teks-samar);
+    padding-top: 1px;
+  }
+
+  .tonggak-nilai { font-size: 13px; }
+
+  .tonggak-daftar {
+    margin: 0;
+    padding-left: var(--s-4);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .tonggak-daftar li { margin-bottom: 2px; }
+  .tonggak-daftar li:last-child { margin-bottom: 0; }
+
+  /* --- Periode berjalan: sedikit lebih tegas --- */
+  .tonggak[data-periode="berjalan"] .tonggak-titik {
+    background: var(--biru);
+    box-shadow: 0 0 0 1px var(--biru);
+  }
+
+  .tonggak[data-periode="berjalan"] .tonggak-kartu {
+    border-color: var(--biru);
+    background: var(--biru-lembut);
+  }
+
+  .tonggak[data-periode="berjalan"] .tonggak-tahun { color: var(--biru); }
+
+  .tonggak[data-periode="berjalan"] .periode-tanda {
+    border-color: var(--biru);
+    color: var(--biru);
+  }
+
+  /* --- Periode mendatang: sengaja lebih redup --- */
+  .tonggak[data-periode="mendatang"] .tonggak-titik {
+    background: var(--putih);
+    border-color: var(--putih);
+    box-shadow: 0 0 0 1px var(--garis-kuat);
+  }
+
+  .tonggak[data-periode="mendatang"] .tonggak-tahun { color: var(--teks-redup); }
+
+  .tonggak[data-periode="mendatang"] .tonggak-kartu {
+    background: var(--netral-latar);
+  }
+
+  .tonggak[data-periode="mendatang"] .tonggak-daftar { color: var(--teks-redup); }
+
+  @media (max-width: 767px) {
+    .linimasa { padding-left: var(--s-6); }
+    .linimasa::before { left: 11px; }
+    .tonggak-titik { left: calc(-1 * var(--s-6) + 5px); width: 14px; height: 14px; }
+    .tonggak-baris { grid-template-columns: minmax(0, 1fr); gap: var(--s-1); }
+  }
+
+  /* ==============================================================
+     KERANGKA M&E
+     ============================================================== */
+
+  .tabel-me { min-width: 1180px; table-layout: fixed; }
+
+  /* Lebar harus cukup untuk JUDUL kolom, bukan hanya isinya — kalau tidak,
+     judul panjang akan menabrak kolom sebelahnya. */
+  .mk-komp   { width: 168px; }
+  .mk-metode { min-width: 310px; }
+  .mk-pj     { width: 148px; }
+  .mk-frek   { width: 168px; }
+  .mk-titik  { min-width: 280px; }
+
+  /* Judul kolom boleh membungkus antar-kata agar tidak meluber. */
+  .tabel-me thead th { white-space: normal; overflow-wrap: break-word; }
+
+  /* Nama komponen jadi penanda utama tiap baris. */
+  .td-komponen {
+    font-weight: 500;
+    color: var(--teks);
+  }
+
+  /* Daftar butir metode: dipecah dari kalimat berkoma pada sumber. */
+  .daftar-butir {
+    margin: 0;
+    padding-left: var(--s-4);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .daftar-butir li { margin-bottom: 1px; }
+  .daftar-butir li:last-child { margin-bottom: 0; }
+
+  .pj-tanda {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--s-2);
+    border: var(--garis-tipis) solid var(--garis-kuat);
+    border-radius: var(--r-kecil);
+    background: var(--biru-lembut);
+    color: var(--biru);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  /* ==============================================================
+     PENDANAAN
+     ============================================================== */
+
+  /* Ringkasan kecil: jumlah program per sumber dana utama. */
+  .ringkas-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--s-3);
+    margin-bottom: var(--s-6);
+  }
+
+  @media (max-width: 1279px) { .ringkas-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 767px)  { .ringkas-grid { grid-template-columns: minmax(0, 1fr); } }
+
+  .ringkas-kartu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+    padding: var(--s-4);
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-besar);
+    background: var(--putih);
+    /* Tinggi seragam antar kartu, keterangan tetap di bawah. */
+    height: 100%;
+  }
+
+  .ringkas-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--teks-samar);
+    min-height: 16px;
+  }
+
+  .ringkas-angka {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-2);
+    font-size: 26px;
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ringkas-satuan {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--teks-redup);
+  }
+
+  .ringkas-rinci {
+    font-size: 12px;
+    color: var(--teks-redup);
+    line-height: 1.45;
+    margin-top: auto;
+  }
+
+  .tabel-dana { min-width: 1120px; table-layout: fixed; }
+  .tabel-dana thead th { white-space: normal; overflow-wrap: break-word; }
+
+  .dk-kat   { width: 124px; }
+  .dk-item  { width: 190px; }
+  .dk-kode  { width: 110px; }
+  .dk-div   { width: 108px; }
+  .dk-sumber{ width: 200px; }
+  .dk-alasan{ min-width: 280px; }
+
+  .td-asal {
+    font-weight: 500;
+    color: var(--teks);
+  }
+
+  /* Label kategori: "Program" vs "Infrastruktur TI" dibedakan halus. */
+  .kat-tanda {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--s-2);
+    border: var(--garis-tipis) solid transparent;
+    border-radius: var(--r-kecil);
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .kat-program { background: var(--biru-lembut); color: var(--biru); border-color: var(--biru); }
+  .kat-ti      { background: var(--st-netral-bg); color: var(--st-netral-teks); border-color: var(--garis-kuat); }
+
+  /* ==============================================================
+     SKELETON — keadaan memuat
+     ============================================================== */
+
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: #E9EDF2;
+    border-radius: var(--r-kecil);
+  }
+
+  /* Kilau bergerak; dinonaktifkan bila pengguna memilih kurangi gerak. */
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+    transform: translateX(-100%);
+    animation: skeleton-kilau 1.2s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-kilau {
+    100% { transform: translateX(100%); }
+  }
+
+  .sk-kartu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    padding: var(--s-4);
+    border: var(--garis-tipis) solid var(--garis);
+    border-radius: var(--r-besar);
+    background: var(--putih);
+  }
+
+  .sk-baris {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    padding: var(--s-3);
+    border-bottom: var(--garis-tipis) solid var(--garis);
+  }
+
+  .sk-baris:last-child { border-bottom: 0; }
+
+  /* Tabel skeleton: kolom sejajar dengan tabel sungguhan. */
+  .sk-tabel-baris {
+    display: grid;
+    grid-template-columns: 52px 88px 168px 68px minmax(200px, 1fr) 168px;
+    gap: var(--s-3);
+    align-items: center;
+    padding: var(--s-3);
+    border-bottom: var(--garis-tipis) solid var(--garis);
+  }
+
+  .sk-tabel-baris:last-child { border-bottom: 0; }
+
+  /* Baris skeleton di dalam <tbody>: satu sel yang membentang penuh,
+     berisi satu baris skeleton berbentuk grid. */
+  .baris-memuat > td {
+    padding: var(--s-3);
+    border-bottom: var(--garis-tipis) solid var(--garis);
+    background: transparent;
+  }
+
+  .baris-memuat:last-child > td { border-bottom: 0; }
+
+  .baris-memuat .sk-tabel-baris { padding: 0; border-bottom: 0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton::after { animation: none; opacity: 0; }
+  }
+
+  /* ==============================================================
+     EMPTYSTATE — keadaan kosong
+     ============================================================== */
+
+  .kosong {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--s-3);
+    padding: var(--s-8) var(--s-5);
+    border: var(--garis-tipis) dashed var(--garis-kuat);
+    border-radius: var(--r-besar);
+    background: var(--putih);
+    text-align: center;
+  }
+
+  .kosong-ikon {
+    display: grid;
+    place-items: center;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--netral-latar);
+    color: var(--teks-samar);
+  }
+
+  .kosong-judul {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--teks);
+  }
+
+  .kosong-teks {
+    font-size: 13px;
+    color: var(--teks-redup);
+    max-width: 46ch;
+    line-height: 1.5;
+  }
+
+  /* Baris tabel yang seluruhnya berisi EmptyState: hilangkan garis bawah
+     dan warna baris supaya kotaknya terlihat sebagai satu kesatuan. */
+  .baris-kosong > td {
+    padding: var(--s-5) var(--s-3);
+    background: transparent;
+  }
+
+  .baris-kosong > td::before { content: none; }
+
+  .baris-kosong .kosong { border-style: solid; }
+
+  /* ==============================================================
+     KETERBACAAN ANGKA
+     ============================================================== */
+
+  /* Semua angka memakai tabular figures agar digit sejajar antar-baris,
+     sehingga kolom angka tidak "bergoyang" saat nilainya berbeda. */
+  .td-angka,
+  .td-capaian,
+  .td-no,
+  .kartu-nilai,
+  .ringkas-angka,
+  .tonggak-tahun,
+  .filter-hitung,
+  .realisasi-input {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+
+  /* Laporan & Pengaturan: komponen khusus dua menu. */
+  :is(#layar-laporan, #layar-pengaturan) .lp-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: var(--s-6); align-items: start; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-body { padding: var(--s-5); }
+  :is(#layar-laporan, #layar-pengaturan) .lp-stack { display: grid; gap: var(--s-4); }
+  :is(#layar-laporan, #layar-pengaturan) .lp-note { color: var(--teks-redup); font-size: 12px; line-height: 1.55; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-callout { padding: var(--s-4); border: var(--garis-tipis) solid var(--biru-garis); border-radius: var(--r-kecil); background: var(--biru-lembut); color: var(--biru); font-size: 12px; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-4); }
+  :is(#layar-laporan, #layar-pengaturan) .lp-field { display: grid; gap: var(--s-2); min-width: 0; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-field :is(input, select) { width: 100%; min-width: 0; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-wide { grid-column: 1 / -1; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s-3); }
+  :is(#layar-laporan, #layar-pengaturan) .lp-divider { border-top: var(--garis-tipis) solid var(--garis); padding-top: var(--s-4); }
+  :is(#layar-laporan, #layar-pengaturan) .lp-check { display: flex; align-items: flex-start; gap: var(--s-2); font-size: 13px; color: var(--teks); }
+  :is(#layar-laporan, #layar-pengaturan) input[type="checkbox"] { accent-color: var(--biru); width: 16px; height: 16px; flex: none; margin: 2px 0 0; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-3); }
+  :is(#layar-laporan, #layar-pengaturan) .lp-stat { border: var(--garis-tipis) solid var(--garis); border-radius: var(--r-kecil); padding: var(--s-3); background: var(--netral-latar); }
+  :is(#layar-laporan, #layar-pengaturan) .lp-stat strong { display: block; font-weight: 500; font-size: 22px; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-title { font-size: 18px; font-weight: 500; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-table { table-layout: auto; width: 100%; min-width: 520px; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-table :is(th, td) { white-space: normal; overflow-wrap: anywhere; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-table tbody tr { cursor: default; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-table .lp-number { text-align: right; font-variant-numeric: tabular-nums; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-meta { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: var(--s-2) var(--s-3); margin: 0; font-size: 12px; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-meta dt { color: var(--teks-redup); }
+  :is(#layar-laporan, #layar-pengaturan) .lp-meta dd { margin: 0; overflow-wrap: anywhere; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-file { display: flex; gap: var(--s-3); align-items: flex-start; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-file-icon { display: grid; place-items: center; width: 40px; height: 44px; flex: none; color: var(--biru); background: var(--biru-lembut); border-radius: var(--r-kecil); font-size: 11px; font-weight: 500; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-file-name { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-list { margin: 0; padding-left: var(--s-5); display: grid; gap: var(--s-3); font-size: 13px; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+  @media (max-width: 1100px) { :is(#layar-laporan, #layar-pengaturan) .lp-grid { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 767px) { :is(#layar-laporan, #layar-pengaturan) .lp-form { grid-template-columns: minmax(0, 1fr); } :is(#layar-laporan, #layar-pengaturan) .lp-stat-grid { grid-template-columns: minmax(0, 1fr); } :is(#layar-laporan, #layar-pengaturan) .lp-meta { grid-template-columns: minmax(0, 1fr); } }
+
+  :is(#layar-laporan, #layar-pengaturan) h4 { margin: 0; font-weight: 500; }
+  :is(#layar-laporan, #layar-pengaturan) .lp-table thead th { padding: var(--s-3); font-size: 11px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--teks-redup); }
+  :is(#layar-laporan, #layar-pengaturan) .tabel-gulir { min-height: 0; }
+
+  /* Pengaturan akun sederhana. */
+  #layar-pengaturan .akun-identitas { display: flex; align-items: center; gap: var(--s-4); }
+  #layar-pengaturan .akun-avatar { display: grid; place-items: center; width: 56px; height: 56px; flex: none; border-radius: 50%; background: var(--biru-lembut); color: var(--biru); }
+  #layar-pengaturan .akun-fieldset { min-width: 0; padding: 0; margin: 0; border: 0; }
+  #layar-pengaturan .akun-fieldset legend { padding: 0; margin-bottom: var(--s-3); }
+  #layar-pengaturan .akun-tema-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-3); }
+  #layar-pengaturan .akun-tema { position: relative; display: grid; gap: var(--s-3); padding: var(--s-3); border: 1px solid var(--garis); border-radius: var(--r-kecil); cursor: pointer; }
+  #layar-pengaturan .akun-tema:has(input:checked) { border-color: var(--biru); background: var(--biru-lembut); }
+  #layar-pengaturan .akun-tema:has(input:focus-visible) { outline: 2px solid var(--biru); outline-offset: 3px; }
+  #layar-pengaturan .akun-tema input { position: absolute; right: 12px; bottom: 16px; margin: 0; width: 16px; height: 16px; accent-color: var(--biru); }
+  #layar-pengaturan .akun-tema-label { display: flex; align-items: center; gap: var(--s-2); font-size: 13px; padding-right: var(--s-6); }
+  #layar-pengaturan .akun-tema-preview { display: flex; height: 88px; border: 1px solid #DDE4EB; border-radius: 6px; overflow: hidden; background: #F7F9FB; }
+  #layar-pengaturan .akun-preview-sidebar { width: 25%; background: #FFFFFF; border-right: 1px solid #DDE4EB; }
+  #layar-pengaturan .akun-preview-isi { display: grid; align-content: start; gap: 8px; flex: 1; padding: 12px; }
+  #layar-pengaturan .akun-preview-isi span { display: block; height: 12px; border-radius: 3px; background: #E1E7ED; }
+  #layar-pengaturan .akun-preview-isi span:first-child { width: 55%; background: #BBD8EF; }
+  #layar-pengaturan .akun-preview-gelap { background: #111B26; border-color: #35475A; }
+  #layar-pengaturan .akun-preview-gelap .akun-preview-sidebar { background: #1B2938; border-color: #35475A; }
+  #layar-pengaturan .akun-preview-gelap .akun-preview-isi span { background: #35475A; }
+  #layar-pengaturan .akun-preview-gelap .akun-preview-isi span:first-child { background: #456D94; }
+  #layar-pengaturan .akun-check-note { display: block; margin-top: var(--s-1); font-size: 12px; color: var(--teks-redup); }
+  #layar-pengaturan .akun-tombol { justify-self: start; }
+  #layar-pengaturan .akun-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--s-5); padding-top: var(--s-4); border-top: var(--garis-tipis) solid var(--garis); }
+  #layar-pengaturan .akun-footer .lp-note { max-width: 64ch; }
+  body:has(#layar-pengaturan[data-aktif] #tema-gelap:checked) {
+    --biru: #8AC2FF; --biru-lembut: #203C56; --biru-garis: #456D94;
+    --netral-latar: #111B26; --putih: #1B2938; --teks: #EAF0F6;
+    --teks-redup: #B7C6D5; --teks-samar: #A4B5C5; --garis: #35475A;
+    --garis-kuat: #4D647A; --abu-placeholder: #26384A; --abu-placeholder-garis: #35475A;
+  }
+  body:has(#layar-pengaturan[data-aktif] #tema-gelap:checked) .tombol-utama { background: #185FA5; border-color: #185FA5; color: #FFFFFF; }
+  @media (max-width: 767px) { #layar-pengaturan .akun-footer { align-items: flex-start; flex-direction: column; } }
+
+</style>
+</head>
+<body>
+
+<a class="lewati" href="#isi-utama">Lewati ke konten utama</a>
+
+<div class="app">
+
+  <!-- ============================ SIDEBAR ============================ -->
+  <aside class="sidebar">
+    <div class="merek">
+      <span class="merek-lambang" aria-hidden="true">SE</span>
+      <span class="merek-teks">
+        <span class="merek-nama">SEAMOLEC</span>
+        <span class="merek-sub">Monitoring Program</span>
+      </span>
+    </div>
+
+    <nav class="nav" aria-labelledby="nav-judul">
+      <h2 class="nav-judul" id="nav-judul">Navigasi</h2>
+      <ul class="nav-daftar">
+        <li>
+          <button type="button" class="nav-item" data-target="dashboard" aria-current="page">
+            <svg class="nav-ikon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.2"/><rect x="9" y="1.5" width="5.5" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.2"/><rect x="1.5" y="9" width="5.5" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.2"/><rect x="9" y="9" width="5.5" height="5.5" rx="1.5" stroke="currentColor" stroke-width="1.2"/></svg>
+            Dashboard
+          </button>
+        </li>
+        <li>
+          <button type="button" class="nav-item" data-target="aktivitas">
+            <svg class="nav-ikon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Aktivitas
+          </button>
+        </li>
+        <li>
+          <button type="button" class="nav-item" data-target="kpi">
+            <svg class="nav-ikon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 13.5h12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><rect x="3" y="8" width="2.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="6.75" y="5" width="2.5" height="8.5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="10.5" y="2.5" width="2.5" height="11" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+            Papan KPI
+          </button>
+        </li>
+        <li>
+          <button type="button" class="nav-item" data-target="timeline">
+            <svg class="nav-ikon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="3" cy="8" r="1.6" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="1.6" stroke="currentColor" stroke-width="1.2"/><circle cx="13" cy="8" r="1.6" stroke="currentColor" stroke-width="1.2"/><path d="M4.6 8h1.8M9.6 8h1.8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Timeline Milestone
+          </button>
+        </li>
+        <li>
+          <button type="button" class="nav-item" data-target="me">
+            <svg class="nav-ikon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 13.5V6.5M6.5 13.5V2.5M10.5 13.5V9M13.5 13.5V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Kerangka M&amp;E
+          </button>
+        </li>
+        <li>
+          <button type="button" class="nav-item" data-target="pendanaan">
+            <svg class="nav-ikon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="1.5" y="3.5" width="13" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/><circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.2"/><path d="M4 8h.01M12 8h.01" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            Pendanaan
+          </button>
+        </li>
+        <li>
+          <button type="button" class="nav-item" data-target="laporan">
+            <svg class="nav-ikon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 1.5h5.5L13 5v9.5H4z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M9.5 1.5V5H13" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M6 8.5h4.5M6 11h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Laporan
+          </button>
+        </li>
+        <li>
+          <button type="button" class="nav-item" data-target="pengaturan">
+            <svg class="nav-ikon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="2.2" stroke="currentColor" stroke-width="1.2"/><path d="M8 1.5v1.8M8 12.7v1.8M14.5 8h-1.8M3.3 8H1.5M12.6 3.4l-1.3 1.3M4.7 11.3l-1.3 1.3M12.6 12.6l-1.3-1.3M4.7 4.7L3.4 3.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+            Pengaturan
+          </button>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="sidebar-kaki">
+      Kerangka prototipe · FYDP 2025–2029
+    </div>
+  </aside>
+
+  <!-- ============================ KONTEN ============================ -->
+  <div class="utama">
+
+    <header class="header">
+      <h1 class="header-judul" id="header-judul">Dashboard</h1>
+
+      <div class="header-kanan">
+        <span class="peran-badge">Mock</span>
+        <div class="peran">
+          <label class="peran-label" for="pilih-peran">Lihat sebagai</label>
+          <select class="peran-pilih" id="pilih-peran" aria-describedby="peran-catatan">
+            <option value="manajer">Manajer Program</option>
+            <option value="pic">PIC Divisi</option>
+            <option value="me">M&amp;E Officer</option>
+            <option value="pimpinan">Pimpinan / Governing Board</option>
+          </select>
+        </div>
+        <span class="sr-only" id="peran-catatan">Pemilih peran bersifat sementara dan belum mengubah tampilan.</span>
+      </div>
+    </header>
+
+    <main class="isi" id="isi-utama" tabindex="-1">
+
+      <!-- ======================= DASHBOARD ======================= -->
+      <section class="layar" id="layar-dashboard" data-aktif aria-labelledby="judul-dashboard">
+        <div class="layar-head">
+          <h2 class="layar-judul" id="judul-dashboard">Dashboard</h2>
+          <p class="layar-deskripsi">Ringkasan eksekutif progres seluruh flagship programme.</p>
+        </div>
+
+        <!-- 4. Filter periode + ekspor -->
+        <div class="bilah-filter">
+          <div class="filter-grup">
+            <div class="filter-medan">
+              <label class="filter-label" for="filter-kuartal">Kuartal</label>
+              <select class="filter-pilih" id="filter-kuartal" aria-describedby="filter-catatan">
+                <option>Semua kuartal</option>
+                <option>Q1</option>
+                <option>Q2</option>
+                <option>Q3</option>
+                <option>Q4</option>
+              </select>
+            </div>
+            <div class="filter-medan">
+              <label class="filter-label" for="filter-tahun">Tahun</label>
+              <select class="filter-pilih" id="filter-tahun" aria-describedby="filter-catatan">
+                <option>2025</option>
+                <option>2026</option>
+                <option>2027</option>
+                <option>2028</option>
+                <option>2029</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="filter-grup">
+            <button type="button" class="tombol tombol-utama" id="tombol-ekspor" aria-describedby="filter-catatan">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1.5v8.5M4.5 7L8 10.5 11.5 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 12.5v1.5h11v-1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Ekspor CSV
+            </button>
+          </div>
+
+          <p class="filter-catatan" id="filter-catatan">Filter periode dan ekspor belum berfungsi pada tahap kerangka.</p>
+        </div>
+
+        <!-- 1. Lima kartu SMART objective 2029 -->
+        <h3 class="panel-judul" style="margin-bottom: var(--s-3);">SMART Objective 2029</h3>
+        <div class="grid-smart" id="grid-smart"></div>
+
+        <!-- 2. Progres per Flagship -->
+        <div class="panel">
+          <div class="panel-kepala">
+            <h3 class="panel-judul">Progres per Flagship</h3>
+            <span class="panel-catatan" id="catatan-flagship"></span>
+          </div>
+          <ul class="flagship-daftar" id="daftar-flagship"></ul>
+        </div>
+
+        <!-- 3. Perlu Perhatian -->
+        <div class="panel">
+          <div class="panel-kepala">
+            <h3 class="panel-judul">Perlu Perhatian</h3>
+            <span class="panel-catatan" id="catatan-risiko"></span>
+          </div>
+          <div id="daftar-risiko"></div>
+        </div>
+
+      </section>
+
+      <!-- ======================= AKTIVITAS ======================= -->
+      <section class="layar" id="layar-aktivitas" aria-labelledby="judul-aktivitas" hidden>
+        <div class="layar-head">
+          <h2 class="layar-judul" id="judul-aktivitas">Aktivitas</h2>
+          <p class="layar-deskripsi">Daftar seluruh aktivitas dengan filter, pencarian, dan penyuntingan status inline.</p>
+        </div>
+
+        <!-- FilterBar -->
+        <div class="filterbar" role="search">
+          <div class="filterbar-baris">
+            <div class="filter-medan">
+              <label class="filter-label" for="f-flagship">Flagship</label>
+              <select class="filter-pilih" id="f-flagship"></select>
+            </div>
+            <div class="filter-medan">
+              <label class="filter-label" for="f-divisi">Divisi</label>
+              <select class="filter-pilih" id="f-divisi"></select>
+            </div>
+            <div class="filter-medan">
+              <label class="filter-label" for="f-pilar">Pilar</label>
+              <select class="filter-pilih" id="f-pilar"></select>
+            </div>
+            <div class="filter-medan">
+              <label class="filter-label" for="f-status">Status</label>
+              <select class="filter-pilih" id="f-status"></select>
+            </div>
+            <div class="filter-medan filter-medan-cari">
+              <label class="filter-label" for="f-cari">Cari</label>
+              <input class="cari" type="search" id="f-cari" placeholder="Cari aktivitas, komponen, PIC, atau kode…" aria-describedby="filter-hitung">
+            </div>
+          </div>
+
+          <div class="filterbar-baris filterbar-baris-2">
+            <p class="filter-hitung" id="filter-hitung" role="status" aria-live="polite"></p>
+            <div class="filter-aksi">
+              <button type="button" class="tombol" id="tombol-reset">Reset filter</button>
+              <button type="button" class="tombol tombol-utama" id="tombol-ekspor-aktivitas">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1.5v8.5M4.5 7L8 10.5 11.5 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 12.5v1.5h11v-1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Ekspor CSV
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabel / EmptyState -->
+        <div class="tabel-bungkus" id="tabel-bungkus">
+          <div class="tabel-gulir">
+            <table class="tabel" id="tabel-aktivitas">
+              <caption>Daftar 80 aktivitas SEAMOLEC FYDP 2025–2029</caption>
+              <thead>
+                <tr id="tabel-kepala"></tr>
+              </thead>
+              <tbody id="tabel-isi"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="hasil-kosong" hidden></div>
+      </section>
+
+      <!-- ======================= PAPAN KPI ======================= -->
+      <section class="layar" id="layar-kpi" aria-labelledby="judul-kpi" hidden>
+        <div class="layar-head">
+          <h2 class="layar-judul" id="judul-kpi">Papan KPI</h2>
+          <p class="layar-deskripsi">Sepuluh indikator dalam dua kelompok. Kolom Realisasi dapat disunting langsung; kolom Capaian dan Status dihitung otomatis dari realisasi dan target.</p>
+        </div>
+
+        <div class="kpi-kaki">
+          <p class="kpi-ringkas" id="kpi-ringkas" role="status" aria-live="polite"></p>
+          <button type="button" class="tombol" id="tombol-ekspor-kpi">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1.5v8.5M4.5 7L8 10.5 11.5 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 12.5v1.5h11v-1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Ekspor CSV
+          </button>
+        </div>
+
+        <!-- KPI Strategi -->
+        <section class="kpi-grup" aria-labelledby="kpi-grup-strategi">
+          <div class="kpi-grup-kepala">
+            <h3 class="kpi-grup-judul" id="kpi-grup-strategi">KPI Strategi</h3>
+            <span class="kpi-grup-catatan">5 indikator · kategori Strategi · mencapai sasaran strategis FYDP</span>
+          </div>
+          <div class="tabel-bungkus">
+            <div class="tabel-gulir">
+              <table class="tabel tabel-kpi">
+                <caption>Indikator kategori Strategi</caption>
+                <thead>
+                  <tr id="kpi-kepala-strategi"></tr>
+                </thead>
+                <tbody id="kpi-isi-strategi"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Target SMART 2029 -->
+        <section class="kpi-grup" aria-labelledby="kpi-grup-smart">
+          <div class="kpi-grup-kepala">
+            <h3 class="kpi-grup-judul" id="kpi-grup-smart">Target SMART 2029</h3>
+            <span class="kpi-grup-catatan">5 indikator · kategori SMART · target kuantitatif akhir periode</span>
+          </div>
+          <div class="tabel-bungkus">
+            <div class="tabel-gulir">
+              <table class="tabel tabel-kpi">
+                <caption>Indikator kategori SMART</caption>
+                <thead>
+                  <tr id="kpi-kepala-smart"></tr>
+                </thead>
+                <tbody id="kpi-isi-smart"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <p class="kpi-grup-catatan" id="kpi-catatan">
+          Rumus status: realisasi kosong menjadi "Belum ada data"; capaian ≥ 100% menjadi "Tercapai";
+          capaian ≥ 70% menjadi "On track"; selain itu "Perlu perhatian". Perbandingan dilakukan pada angka capaian, bukan pada teks.
+        </p>
+      </section>
+
+      <!-- ======================= TIMELINE ======================= -->
+      <section class="layar" id="layar-timeline" aria-labelledby="judul-timeline" hidden>
+        <div class="layar-head">
+          <h2 class="layar-judul" id="judul-timeline">Timeline Milestone</h2>
+          <p class="layar-deskripsi">Lima tonggak implementasi tahunan 2025–2029. Tonggak 2025–2026 adalah periode berjalan; 2027–2029 adalah periode mendatang.</p>
+        </div>
+
+        <ol class="linimasa" id="linimasa"></ol>
+      </section>
+
+      <!-- ======================= KERANGKA M&E ======================= -->
+      <section class="layar" id="layar-me" aria-labelledby="judul-me" hidden>
+        <div class="layar-head">
+          <h2 class="layar-judul" id="judul-me">Kerangka M&amp;E</h2>
+          <p class="layar-deskripsi">Lima komponen monitoring dan evaluasi beserta metode pengumpulan data, penanggung jawab, frekuensi review, dan titik keputusannya.</p>
+        </div>
+
+        <div class="tabel-bungkus">
+          <div class="tabel-gulir">
+            <table class="tabel tabel-me">
+              <caption>Lima komponen kerangka monitoring dan evaluasi</caption>
+              <thead>
+                <tr id="me-kepala"></tr>
+              </thead>
+              <tbody id="me-isi"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================= PENDANAAN ======================= -->
+      <section class="layar" id="layar-pendanaan" aria-labelledby="judul-pendanaan" hidden>
+        <div class="layar-head">
+          <h2 class="layar-judul" id="judul-pendanaan">Pendanaan</h2>
+          <p class="layar-deskripsi">Tiga belas sumber pendanaan dalam dua kelompok — sembilan program flagship dan empat infrastruktur TI — beserta kode strategi, divisi pelaksana, sumber dana, dan rasionalnya.</p>
+        </div>
+
+        <!-- Ringkasan sumber dana -->
+        <div class="ringkas-grid" id="dana-ringkas"></div>
+
+        <!-- Pendanaan Program -->
+        <section class="kpi-grup" aria-labelledby="dana-grup-program">
+          <div class="kpi-grup-kepala">
+            <h3 class="kpi-grup-judul" id="dana-grup-program">Program</h3>
+            <span class="kpi-grup-catatan">9 baris · satu per flagship programme</span>
+          </div>
+          <div class="tabel-bungkus">
+            <div class="tabel-gulir">
+              <table class="tabel tabel-dana">
+                <caption>Pendanaan program flagship</caption>
+                <thead>
+                  <tr id="dana-kepala-program"></tr>
+                </thead>
+                <tbody id="dana-isi-program"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Infrastruktur TI -->
+        <section class="kpi-grup" aria-labelledby="dana-grup-ti">
+          <div class="kpi-grup-kepala">
+            <h3 class="kpi-grup-judul" id="dana-grup-ti">Infrastruktur TI</h3>
+            <span class="kpi-grup-catatan">4 baris · aset teknologi pendukung</span>
+          </div>
+          <div class="tabel-bungkus">
+            <div class="tabel-gulir">
+              <table class="tabel tabel-dana">
+                <caption>Pendanaan infrastruktur TI</caption>
+                <thead>
+                  <tr id="dana-kepala-ti"></tr>
+                </thead>
+                <tbody id="dana-isi-ti"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <!-- ======================= LAPORAN ======================= -->
+      <section class="layar" id="layar-laporan" aria-labelledby="judul-laporan" hidden>
+<div class="layar-head"><h2 class="layar-judul" id="judul-laporan">Laporan</h2><p class="layar-deskripsi">Laporan pelaksanaan, capaian, dan dampak program untuk review berkala FYDP 2025–2029.</p></div><div class="ringkas-grid"><div class="ringkas-kartu"><p class="ringkas-label">Flagship programme</p><p class="ringkas-angka">9</p><p class="ringkas-rinci">Cakupan seluruh program dalam tabel kerja.</p></div><div class="ringkas-kartu"><p class="ringkas-label">Aktivitas FYDP</p><p class="ringkas-angka">88</p><p class="ringkas-rinci">Rencana aktivitas sepanjang 2025–2029.</p></div><div class="ringkas-kartu"><p class="ringkas-label">Realisasi KPI</p><p class="ringkas-angka">0 / 10</p><p class="ringkas-rinci">Belum ada realisasi pada Excel sumber.</p></div></div><div class="panel"><div class="panel-kepala"><h3 class="panel-judul">Periode laporan</h3><span class="panel-catatan">FYDP 2025–2029</span></div><div class="lp-body lp-stack"><div class="lp-form"><div class="lp-field"><label class="filter-label" for="lap-jenis">Jenis laporan</label><select class="filter-pilih" id="lap-jenis"><option>Laporan kuartalan</option><option selected>Laporan tahunan</option><option>Laporan Dampak Tahunan</option></select></div><div class="lp-field"><label class="filter-label" for="lap-tahun">Tahun</label><select class="filter-pilih" id="lap-tahun"><option>2025</option><option selected>2026</option><option>2027</option><option>2028</option><option>2029</option></select></div><div class="lp-field"><label class="filter-label" for="lap-periode">Periode</label><select class="filter-pilih" id="lap-periode"><option>Seluruh tahun</option><option>Q1 · Januari–Maret</option><option>Q2 · April–Juni</option><option>Q3 · Juli–September</option><option>Q4 · Oktober–Desember</option></select></div><div class="lp-field"><label class="filter-label" for="lap-divisi">Divisi</label><select class="filter-pilih" id="lap-divisi"><option>Semua divisi</option><option>CPMP</option><option>Training</option><option>R&amp;D</option><option>IT&amp;KM</option></select></div></div><div class="lp-row lp-divider"><p class="lp-note">Pratinjau awal: seluruh divisi, tahun 2026.</p><button type="button" class="tombol tombol-utama">Susun laporan</button></div></div></div><div class="lp-grid"><div><div class="panel"><div class="panel-kepala"><h3 class="panel-judul">Pratinjau laporan</h3><span class="panel-catatan">Tahunan · 2026</span></div><div class="lp-body lp-stack"><div class="lp-row"><span class="ringkas-label">SEAMOLEC · FYDP 2025–2029</span><span class="pill pill-netral"><span class="pill-titik"></span>Draf</span></div><div><h4 class="lp-title">Laporan Tahunan 2026</h4><p class="lp-note">Ringkasan rencana pelaksanaan dan kebutuhan pelaporan seluruh flagship programme.</p></div><div class="lp-stat-grid"><div class="lp-stat"><span class="lp-note">Flagship programme</span><strong>9</strong></div><div class="lp-stat"><span class="lp-note">Aktivitas direncanakan 2026</span><strong>25</strong></div><div class="lp-stat"><span class="lp-note">Indikator dengan realisasi</span><strong>0 / 10</strong></div></div><div class="lp-callout">Realisasi KPI belum diisi pada tabel kerja. Capaian dan dampak belum dapat disimpulkan dari rencana aktivitas.</div><h4 class="panel-judul">Rencana aktivitas per flagship</h4></div><div class="tabel-gulir"><table class="tabel lp-table"><caption>Rencana aktivitas tahun 2026 menurut tabel kerja</caption><thead><tr><th scope="col">Flagship</th><th scope="col">Lead division</th><th scope="col">Aktivitas 2026</th><th scope="col">Realisasi KPI</th></tr></thead><tbody><tr><td>AILOS</td><td>IT&amp;KM</td><td><span class="lp-number">5</span></td><td><span class="pill pill-netral"><span class="pill-titik"></span>Belum ada data</span></td></tr><tr><td>PROGRES</td><td>CPMP</td><td><span class="lp-number">2</span></td><td><span class="pill pill-netral"><span class="pill-titik"></span>Belum ada data</span></td></tr><tr><td>ADCEND</td><td>CPMP</td><td><span class="lp-number">3</span></td><td><span class="pill pill-netral"><span class="pill-titik"></span>Belum ada data</span></td></tr><tr><td>R-MODE</td><td>CPMP</td><td><span class="lp-number">2</span></td><td><span class="pill pill-netral"><span class="pill-titik"></span>Belum ada data</span></td></tr><tr><td>FLEXERA</td><td>Training</td><td><span class="lp-number">2</span></td><td><span class="pill pill-netral"><span class="pill-titik"></span>Belum ada data</span></td></tr><tr><td>CREATE</td><td>Training</td><td><span class="lp-number">3</span></td><td><span class="pill pill-netral"><span class="pill-titik"></span>Belum ada data</span></td></tr><tr><td>CODEA</td><td>Training</td><td><span class="lp-number">3</span></td><td><span class="pill pill-netral"><span class="pill-titik"></span>Belum ada data</span></td></tr><tr><td>NEXEL</td><td>Training</td><td><span class="lp-number">3</span></td><td><span class="pill pill-netral"><span class="pill-titik"></span>Belum ada data</span></td></tr><tr><td>COALA</td><td>R&amp;D</td><td><span class="lp-number">2</span></td><td><span class="pill pill-netral"><span class="pill-titik"></span>Belum ada data</span></td></tr></tbody></table></div><div class="lp-body"><p class="lp-note">Sumber: sheet Aktivitas per Flagship dan KPI &amp; Target 2029. Jumlah aktivitas merupakan rencana tahunan, bukan jumlah kegiatan yang telah selesai.</p></div></div></div><div><div class="panel"><div class="panel-kepala"><h3 class="panel-judul">Isi laporan</h3><span class="panel-catatan">6 bagian</span></div><div class="lp-body lp-stack"><p class="lp-note">Cakupan laporan mengikuti kerangka Monitoring, Evaluation, and Learning (MEL).</p><label class="lp-check"><input type="checkbox" checked><span>Ringkasan eksekutif</span></label><label class="lp-check"><input type="checkbox" checked><span>Progres flagship dan aktivitas</span></label><label class="lp-check"><input type="checkbox" checked><span>KPI strategi dan target SMART</span></label><label class="lp-check"><input type="checkbox" checked><span>Milestone tahunan</span></label><label class="lp-check"><input type="checkbox" checked><span>Pendanaan dan fokus kesetaraan</span></label><label class="lp-check"><input type="checkbox" checked><span>Temuan M&E dan tindak lanjut</span></label><p class="lp-note lp-divider">Laporan Dampak Tahunan berfokus pada perubahan kapasitas institusi dan nilai pendidikan, sesuai FYDP hal. 37–38.</p></div></div><div class="panel"><div class="panel-kepala"><h3 class="panel-judul">Ekspor laporan</h3><span class="panel-catatan"></span></div><div class="lp-body lp-stack"><p class="lp-note">Format dokumen untuk review Governing Board dan publikasi dampak tahunan.</p><div class="lp-actions"><button type="button" class="tombol tombol-utama">Unduh PDF</button><button type="button" class="tombol">Ekspor CSV</button></div><p class="lp-note">Tampilan rancangan; penyusunan dan unduhan belum aktif.</p></div></div></div></div><div class="panel"><div class="panel-kepala"><h3 class="panel-judul">Jadwal review dan pelaporan</h3><span class="panel-catatan">FYDP hal. 38</span></div><div class="tabel-gulir"><table class="tabel lp-table"><caption>Jadwal review menurut Kerangka M&E</caption><thead><tr><th scope="col">Komponen M&E</th><th scope="col">Penanggung jawab</th><th scope="col">Frekuensi review</th></tr></thead><tbody><tr><td>MWG Progress &amp; Policy</td><td>CPMP</td><td>Kuartalan &amp; Tahunan</td></tr><tr><td>Financial Health &amp; Equity</td><td>R&amp;D</td><td>Bulanan (internal), Kuartalan (laporan GB)</td></tr><tr><td>Quality &amp; Credibility</td><td>Training</td><td>Dua kali setahun</td></tr><tr><td>Technology Effectiveness</td><td>IT&amp;KM</td><td>Dua kali setahun (fase pilot), kuartalan (pasca-rollout)</td></tr><tr><td>Institutional Impact</td><td>CPMP</td><td>Tahunan (publikasi publik)</td></tr></tbody></table></div></div><p class="lp-note">Acuan: Final_SEAMOLEC FYDP.pdf, hal. 37–38; tabel kerja, sheet Kerangka M&amp;E, Aktivitas per Flagship, dan KPI &amp; Target 2029.</p>
+      </section>
+
+      <!-- ======================= PENGATURAN ======================= -->
+      <section class="layar" id="layar-pengaturan" aria-labelledby="judul-pengaturan" hidden>
+        <div class="layar-head">
+          <h2 class="layar-judul" id="judul-pengaturan">Pengaturan</h2>
+          <p class="layar-deskripsi">Kelola profil akun, tampilan, bahasa, dan notifikasi Anda.</p>
+        </div>
+
+        <form id="form-pengaturan-akun">
+          <div class="lp-grid">
+            <div>
+              <div class="panel">
+                <div class="panel-kepala"><h3 class="panel-judul">Profil akun</h3><span class="panel-catatan">Informasi pribadi</span></div>
+                <div class="lp-body lp-stack">
+                  <div class="akun-identitas">
+                    <span class="akun-avatar" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
+                    <div><h4 class="panel-judul">Akun Anda</h4><p class="lp-note">Informasi yang ditampilkan pada profil Anda.</p></div>
+                  </div>
+                  <div class="lp-form">
+                    <div class="lp-field"><label class="filter-label" for="akun-nama">Nama lengkap</label><input class="cari" id="akun-nama" name="nama" type="text" autocomplete="name" placeholder="Masukkan nama lengkap"></div>
+                    <div class="lp-field"><label class="filter-label" for="akun-email">Alamat email</label><input class="cari" id="akun-email" name="email" type="email" autocomplete="email" placeholder="nama@contoh.com"></div>
+                    <div class="lp-field"><label class="filter-label" for="akun-divisi">Divisi</label><select class="filter-pilih" id="akun-divisi" name="divisi"><option value="">Pilih divisi</option><option>CPMP</option><option>Training</option><option>R&amp;D</option><option>IT&amp;KM</option><option>Admin &amp; Finance</option></select></div>
+                    <div class="lp-field"><label class="filter-label" for="akun-jabatan">Jabatan</label><input class="cari" id="akun-jabatan" name="jabatan" type="text" autocomplete="organization-title" placeholder="Masukkan jabatan"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="panel">
+                <div class="panel-kepala"><h3 class="panel-judul">Tampilan dan bahasa</h3><span class="panel-catatan">Preferensi Anda</span></div>
+                <div class="lp-body lp-stack">
+                  <fieldset class="akun-fieldset">
+                    <legend class="filter-label">Tema tampilan</legend>
+                    <div class="akun-tema-grid">
+                      <label class="akun-tema">
+                        <input id="tema-terang" type="radio" name="tema" value="light" checked>
+                        <span class="akun-tema-preview akun-preview-terang" aria-hidden="true"><span class="akun-preview-sidebar"></span><span class="akun-preview-isi"><span></span><span></span><span></span></span></span>
+                        <span class="akun-tema-label"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.2"/><path d="M8 1v1M8 14v1M1 8h1M14 8h1M3 3l.8.8M12.2 12.2l.8.8M13 3l-.8.8M3.8 12.2 3 13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Terang / Light</span>
+                      </label>
+                      <label class="akun-tema">
+                        <input id="tema-gelap" type="radio" name="tema" value="dark">
+                        <span class="akun-tema-preview akun-preview-gelap" aria-hidden="true"><span class="akun-preview-sidebar"></span><span class="akun-preview-isi"><span></span><span></span><span></span></span></span>
+                        <span class="akun-tema-label"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13.7 10A6 6 0 0 1 6 2.3 6 6 0 1 0 13.7 10Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>Gelap / Dark</span>
+                      </label>
+                    </div>
+                  </fieldset>
+                  <div class="lp-field lp-divider"><label class="filter-label" for="akun-bahasa">Bahasa tampilan</label><select class="filter-pilih" id="akun-bahasa" name="bahasa"><option value="id" selected>Bahasa Indonesia</option><option value="en">English</option></select><p class="lp-note">Pilih bahasa yang ingin digunakan pada aplikasi.</p></div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="panel">
+                <div class="panel-kepala"><h3 class="panel-judul">Notifikasi</h3><span class="panel-catatan">Melalui email</span></div>
+                <div class="lp-body lp-stack">
+                  <p class="lp-note">Pilih pemberitahuan yang ingin Anda terima.</p>
+                  <label class="lp-check"><input type="checkbox" name="notifikasi-aktivitas" checked><span>Pembaruan aktivitas<span class="akun-check-note">Perubahan status aktivitas pada divisi Anda.</span></span></label>
+                  <label class="lp-check"><input type="checkbox" name="notifikasi-review" checked><span>Pengingat review<span class="akun-check-note">Pengingat jadwal review dan penyusunan laporan.</span></span></label>
+                  <label class="lp-check"><input type="checkbox" name="notifikasi-ringkasan"><span>Ringkasan mingguan<span class="akun-check-note">Ringkasan progres program setiap minggu.</span></span></label>
+                </div>
+              </div>
+
+              <div class="panel">
+                <div class="panel-kepala"><h3 class="panel-judul">Keamanan akun</h3></div>
+                <div class="lp-body lp-stack">
+                  <div><h4 class="panel-judul">Kata sandi</h4><p class="lp-note">Perbarui kata sandi untuk menjaga akses akun Anda.</p></div>
+                  <button type="button" class="tombol akun-tombol">Ubah kata sandi</button>
+                  <div class="lp-divider"><h4 class="panel-judul">Keluar dari akun</h4><p class="lp-note">Akhiri sesi setelah selesai menggunakan aplikasi.</p></div>
+                  <button type="button" class="tombol akun-tombol">Keluar dari akun</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="akun-footer">
+            <p class="lp-note">Pratinjau pengaturan akun. Tema dapat dicoba; bahasa, penyimpanan, dan tindakan akun belum aktif.</p>
+            <div class="lp-actions"><button type="reset" class="tombol">Reset perubahan</button><button type="button" class="tombol tombol-utama">Simpan perubahan</button></div>
+          </div>
+        </form>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ======================= DRAWER DETAIL AKTIVITAS ======================= -->
+<div class="tirai" id="tirai" hidden></div>
+
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-judul" hidden>
+  <div class="drawer-kepala">
+    <div style="min-width: 0;">
+      <p class="drawer-kode" id="drawer-kode"></p>
+      <h2 class="drawer-judul" id="drawer-judul"></h2>
+    </div>
+    <button type="button" class="tombol-silang" id="drawer-tutup" aria-label="Tutup panel detail">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <div class="drawer-isi" id="drawer-isi"></div>
+</aside>
+
+<script>
+  (function () {
+    "use strict";
+
+    /* ============================================================
+       DATA MINIMAL UNTUK DASHBOARD
+       Hanya field yang dipakai layar Dashboard, disalin dari model
+       data lengkap (9 programme, 80 activity, 10 KPI).
+       ============================================================ */
+
+    // 9 flagship: id, akronim, nama lengkap, kode strategi, divisi pemimpin,
+    // dan jumlah aktivitas (dihitung dari daftar activities di bawah).
+    var programmes = [
+      { id: 1, acronym: "AILOS",   full_name: "Access & Inclusion Low-bandwidth ODL Solutions",                              strategy_code: "ST3", lead_division: "IT&KM" },
+      { id: 2, acronym: "PROGRES", full_name: "Partnership for Research, Open Learning, Global Readiness, and Educational Synergy", strategy_code: "ST1", lead_division: "CPMP" },
+      { id: 3, acronym: "ADCEND",  full_name: "Advancing Systems for Credentialing, E-learning, and Networked Distance Education", strategy_code: "ST1", lead_division: "CPMP" },
+      { id: 4, acronym: "R-MODE",  full_name: "Resource Mobilization for Digital Equity",                                    strategy_code: "WT2", lead_division: "CPMP" },
+      { id: 5, acronym: "FLEXERA", full_name: "Flexible Credentials for Educator Advancement",                              strategy_code: "WT3", lead_division: "Training" },
+      { id: 6, acronym: "CREATE",  full_name: "Creative and Responsive Educator Acceleration through Technology Empowerment", strategy_code: "WT3", lead_division: "Training" },
+      { id: 7, acronym: "CODEA",   full_name: "Coding and Artificial Intelligence for Education Advancement",               strategy_code: "WT3", lead_division: "Training" },
+      { id: 8, acronym: "NEXEL",   full_name: "Next Generation Experiential Learning Initiative",                            strategy_code: "WT3", lead_division: "Training" },
+      { id: 9, acronym: "COALA",   full_name: "Comprehensive ODL Analytics",                                                 strategy_code: "WO2", lead_division: "R&D" }
+    ];
+
+    // 5 divisi fungsional.
+    var divisions = [
+      { code: "CPMP", name: "CPMP" },
+      { code: "IT&KM", name: "IT&KM" },
+      { code: "Training", name: "Training" },
+      { code: "R&D", name: "R&D" },
+      { code: "Admin & Finance", name: "Admin & Finance" }
+    ];
+
+    // 80 aktivitas — 10 kolom tabel.
+    // Field: id, programme_id, component, code, title, pillar, division, pic, status, note, due_date.
+    // Seluruh status, note, dan due_date masih null — sesuai kondisi spreadsheet sumber.
+    // `pillar` dipakai untuk filter dan tampilan kolom Pilar.
+    var activities = [];
+
+    // AILOS (programme_id 1) — 15 aktivitas
+    activities.push(
+      { id: 1,  programme_id: 1, component: "Open High School (SMA Terbuka)", code: "T1", title: "Standardisasi protokol pelatihan guru dan tutor", pillar: "T - Capacity Building", division: "Training", pic: "Arie Susanty", status: "Perlu perhatian", note: null, due_date: null },
+      { id: 2,  programme_id: 1, component: "Open High School (SMA Terbuka)", code: "R1", title: "Kerangka konseptual dan riset pengembangan SMA Terbuka", pillar: "R - R&D", division: "R&D", pic: "Arie Susanty", status: "Perlu perhatian", note: null, due_date: null },
+      { id: 3,  programme_id: 1, component: "Open High School (SMA Terbuka)", code: "I1", title: "Pengembangan platform \"SEAMOLEC Lite\"", pillar: "I - IT&KM", division: "IT&KM", pic: "Arie Susanty", status: "Perlu perhatian", note: null, due_date: null },
+      { id: 4,  programme_id: 1, component: "Open High School (SMA Terbuka)", code: "C1", title: "Forum / Dialog Kebijakan Alternative Learning Systems (ALS)", pillar: "C - CPMP", division: "CPMP", pic: "Arie Susanty", status: "On track", note: null, due_date: null },
+      { id: 5,  programme_id: 1, component: "ODL Central Maluku (PJJ Malteng)", code: "T2", title: "Pelatihan dan pendampingan pedagogis guru serta tutor PJJ Maluku Tengah", pillar: "T - Capacity Building", division: "Training", pic: null, status: "Selesai", note: null, due_date: null },
+      { id: 6,  programme_id: 1, component: "ODL Central Maluku (PJJ Malteng)", code: "R2 / I2", title: "Asesmen kesiapan implementasi PJJ di Maluku Tengah", pillar: "R - R&D", division: "R&D / IT&KM", pic: null, status: "On track", note: null, due_date: null },
+      { id: 7,  programme_id: 1, component: "ODL Central Maluku (PJJ Malteng)", code: "R3", title: "Riset output program dan dampak sosio-pendidikan", pillar: "R - R&D", division: "R&D", pic: null, status: "On track", note: null, due_date: null },
+      { id: 8,  programme_id: 1, component: "ODL Central Maluku (PJJ Malteng)", code: "C2", title: "Advokasi strategis untuk ALS", pillar: "C - CPMP", division: "CPMP", pic: null, status: "Belum mulai", note: null, due_date: null },
+      { id: 9,  programme_id: 1, component: "ODL Indonesian Schools Abroad (PJJ SILN)", code: "T3", title: "Pengembangan profesional guru dan tutor Sekolah Indonesia Luar Negeri (SILN)", pillar: "T - Capacity Building", division: "Training", pic: null, status: "On track", note: null, due_date: null },
+      { id: 10, programme_id: 1, component: "ODL Indonesian Schools Abroad (PJJ SILN)", code: "C3", title: "Dokumentasi dan publikasi", pillar: "C - CPMP", division: "CPMP", pic: null, status: "On track", note: null, due_date: null },
+      { id: 11, programme_id: 1, component: "Online Equivalency (Setara Daring)", code: "T3", title: "Peningkatan kapasitas Pamong Belajar pada sistem kesetaraan daring", pillar: "T - Capacity Building", division: "Training", pic: null, status: "Belum mulai", note: null, due_date: null },
+      { id: 12, programme_id: 1, component: "Online Equivalency (Setara Daring)", code: "I3", title: "Optimasi teknis dan pembaruan platform Setara Daring", pillar: "I - IT&KM", division: "IT&KM", pic: null, status: "On track", note: null, due_date: null },
+      { id: 13, programme_id: 1, component: "Online Equivalency (Setara Daring)", code: "C4", title: "Dokumentasi dan publikasi", pillar: "C - CPMP", division: "CPMP", pic: null, status: "Selesai", note: null, due_date: null },
+      { id: 14, programme_id: 1, component: "Online Courses (Kursus Daring)", code: "T4", title: "Pelatihan instruksional bagi penyelenggara kursus daring", pillar: "T - Capacity Building", division: "Training", pic: null, status: "Belum mulai", note: null, due_date: null },
+      { id: 15, programme_id: 1, component: "Online Courses (Kursus Daring)", code: "I4", title: "Optimasi teknis dan pembaruan platform Kursus Daring", pillar: "I - IT&KM", division: "IT&KM", pic: null, status: "On track", note: null, due_date: null }
+    );
+
+    // PROGRES (programme_id 2) — 9 aktivitas
+    activities.push(
+      { id: 16, programme_id: 2, component: "Blended Learning Management (PM-PTM)", code: "T1", title: "Workshop pengembangan kursus daring untuk Blended Learning", pillar: "T - Capacity Building", division: "Training", pic: null, status: "Selesai", note: null, due_date: null },
+      { id: 17, programme_id: 2, component: "Blended Learning Management (PM-PTM)", code: "T2", title: "Workshop desain program", pillar: "T - Capacity Building", division: "Training", pic: null, status: "On track", note: null, due_date: null },
+      { id: 18, programme_id: 2, component: "Blended Learning Management (PM-PTM)", code: "T3", title: "Training of Trainers (ToT) bagi dosen / faculty", pillar: "T - Capacity Building", division: "Training", pic: null, status: "Selesai", note: null, due_date: null },
+      { id: 19, programme_id: 2, component: "Blended Learning Management (PM-PTM)", code: "T4", title: "Pelatihan bagi mahasiswa dan pendidik mitra", pillar: "T - Capacity Building", division: "Training", pic: null, status: "Belum mulai", note: null, due_date: null },
+      { id: 20, programme_id: 2, component: "Blended Learning Management (PM-PTM)", code: "R1", title: "Riset implementasi model Blended Learning di sekolah mitra", pillar: "R - R&D", division: "R&D", pic: null, status: "On track", note: null, due_date: null },
+      { id: 21, programme_id: 2, component: "Blended Learning Management (PM-PTM)", code: "C1", title: "Dokumentasi sistematis kegiatan program", pillar: "C - CPMP", division: "CPMP", pic: null, status: "Selesai", note: null, due_date: null },
+      { id: 22, programme_id: 2, component: "Mentorship Program Studi PJJ", code: "T5", title: "Workshop desain program strategis", pillar: "T - Capacity Building", division: "Training", pic: null, status: "On track", note: null, due_date: null },
+      { id: 23, programme_id: 2, component: "Mentorship Program Studi PJJ", code: "T6", title: "Pengembangan profesional bagi anggota fakultas", pillar: "T - Capacity Building", division: "Training", pic: null, status: "On track", note: null, due_date: null },
+      { id: 24, programme_id: 2, component: "Mentorship Program Studi PJJ", code: "C2", title: "Dialog kebijakan dan forum penguatan program studi PJJ", pillar: "C - CPMP", division: "CPMP", pic: null, status: "Selesai", note: null, due_date: null }
+    );
+
+    // ADCEND (programme_id 3) — 9 aktivitas
+    activities.push(
+      { id: 25, programme_id: 3, component: "Kerangka Mikrokredensial", code: "R1", title: "Pengembangan kerangka dan pedoman micro-credential untuk Indonesia", pillar: "R - R&D", division: "R&D", pic: null, status: "On track", note: null, due_date: null },
+      { id: 26, programme_id: 3, component: "Kerangka Mikrokredensial", code: "T1", title: "Bantuan teknis bagi perguruan tinggi dalam pengembangan dan penyampaian micro-credential", pillar: "T - Capacity Building", division: "Training", pic: null, status: "Selesai", note: null, due_date: null },
+      { id: 27, programme_id: 3, component: "Working Group", code: "C1", title: "Kelompok Kerja Nasional (Indonesia) dan Regional (Asia Tenggara)", pillar: "C - CPMP", division: "CPMP", pic: null, status: "Belum mulai", note: null, due_date: null },
+      { id: 28, programme_id: 3, component: "Platform & Infrastruktur", code: "I1", title: "Penyediaan teknis untuk MOOC, platform e-learning, digital open badge, dan learning analytics", pillar: "I - IT&KM", division: "IT&KM", pic: null, status: "On track", note: null, due_date: null },
+      { id: 29, programme_id: 3, component: "Studi & Kajian", code: "R2", title: "Kajian ratifikasi dan implementasi Konvensi Tokyo serta Global Convention tentang pengakuan kualifikasi pendidikan tinggi di ASEAN", pillar: "R - R&D", division: "R&D", pic: null, status: "Selesai", note: null, due_date: null },
+      { id: 30, programme_id: 3, component: "Deployment Micro-credentials", code: "T2", title: "Penerapan micro-credentials pada International Trade (mitra FITT Canada) dan Digital Marketing (mitra ASCENDA Canada)", pillar: "T - Capacity Building", division: "Training", pic: null, status: "On track", note: null, due_date: null },
+      { id: 31, programme_id: 3, component: "Dialog & Advokasi", code: "C2", title: "Serial dialog kebijakan dan forum regional tentang micro-credentials", pillar: "C - CPMP", division: "CPMP", pic: null, status: "On track", note: null, due_date: null },
+      { id: 32, programme_id: 3, component: "Kerangka Regional", code: "R3", title: "Perumusan kerangka micro-credential regional Asia Tenggara", pillar: "R - R&D", division: "R&D", pic: null, status: "Belum mulai", note: null, due_date: null },
+      { id: 33, programme_id: 3, component: "Dialog & Advokasi", code: "C3", title: "Advokasi media sosial dan diseminasi publikasi strategis", pillar: "C - CPMP", division: "CPMP", pic: null, status: "On track", note: null, due_date: null }
+    );
+
+    // FLEXERA (programme_id 5) — 4 aktivitas
+    activities.push(
+      { id: 34, programme_id: 5, component: "Kerangka & Konten", code: "R1", title: "Pengembangan kerangka, pedoman operasional, dan kurasi konten micro-credential SEAMOLEC", pillar: "R - R&D", division: "R&D", pic: null, status: "Ditunda", note: null, due_date: null },
+      { id: 35, programme_id: 5, component: "Pelatihan", code: "T1", title: "Peningkatan kapasitas dan pelatihan micro-credential SEAMOLEC", pillar: "T - Capacity Building", division: "Training", pic: null, status: "Belum mulai", note: null, due_date: null },
+      { id: 36, programme_id: 5, component: "Kemitraan", code: "C1", title: "Keterlibatan strategis dan pengembangan kemitraan potensial (APSTPI, LSP)", pillar: "C - CPMP", division: "CPMP", pic: null, status: "On track", note: null, due_date: null },
+      { id: 37, programme_id: 5, component: "Platform", code: "I1", title: "Optimasi teknis dan peningkatan sistemik platform micro-credential SEAMOLEC", pillar: "I - IT&KM", division: "IT&KM", pic: null, status: "Selesai", note: null, due_date: null }
+    );
+
+    // CREATE (programme_id 6) — 9 aktivitas
+    activities.push(
+      { id: 38, programme_id: 6, component: "Kursus Daring", code: "T1", title: "Penyampaian kursus daring SEAMOLEC", pillar: "T - Capacity Building", division: "Training", pic: null, status: "On track", note: null, due_date: null },
+      { id: 39, programme_id: 6, component: "Kursus Daring", code: "C1", title: "Diseminasi sistematis dan promosi penawaran kursus daring", pillar: "C - CPMP", division: "CPMP", pic: null, status: "On track", note: null, due_date: null },
+      { id: 40, programme_id: 6, component: "Kursus Daring", code: "I1", title: "Penyediaan bantuan dan dukungan teknis", pillar: "I - IT&KM", division: "IT&KM", pic: null, status: "Belum mulai", note: null, due_date: null },
+      { id: 41, programme_id: 6, component: "Pelatihan On-site", code: "T2", title: "Fasilitasi pelatihan tatap muka di institusi mitra", pillar: "T - Capacity Building", division: "Training", pic: null, status: "On track", note: null, due_date: null },
+      { id: 42, programme_id: 6, component: "Pelatihan On-site", code: "C2", title: "Dokumentasi dan pelaporan resmi kegiatan pelatihan mitra", pillar: "C - CPMP", division: "CPMP", pic: null, status: "Selesai", note: null, due_date: null },
+      { id: 43, programme_id: 6, component: "Pelatihan In-house", code: "T3", title: "Fasilitasi pelatihan tatap muka in-house di SEAMOLEC Centre", pillar: "T - Capacity Building", division: "Training", pic: null, status: "Belum mulai", note: null, due_date: null },
+      { id: 44, programme_id: 6, component: "Pelatihan In-house", code: "C3", title: "Dokumentasi dan pelaporan resmi pelatihan institusional di SEAMOLEC", pillar: "C - CPMP", division: "CPMP", pic: null, status: "On track", note: null, due_date: null },
+      { id: 45, programme_id: 6, component: "Pelatihan In-house", code: "I2", title: "Penyediaan dukungan teknis menyeluruh", pillar: "I - IT&KM", division: "IT&KM", pic: null, status: "Selesai", note: null, due_date: null },
+      { id: 46, programme_id: 6, component: "Webinar", code: "C4", title: "Penyelenggaraan webinar tentang praktik terbaik pendidikan", pillar: "C - CPMP", division: "CPMP", pic: null, status: "Belum mulai", note: null, due_date: null }
+    );
+
+    // CODEA (programme_id 7) — 10 aktivitas
+    activities.push(
+      { id: 47, programme_id: 7, component: "CODE-A", code: "R1", title: "Pengembangan model CODE-A Fase 2 (Computational Thinking untuk sekolah dasar)", pillar: "R - R&D", division: "R&D", pic: null, status: "Perlu perhatian", note: null, due_date: null },
+      { id: 48, programme_id: 7, component: "CODE-A", code: "T1", title: "Peningkatan kapasitas CODE-A", pillar: "T - Capacity Building", division: "Training", pic: null, status: "Perlu perhatian", note: null, due_date: null },
+      { id: 49, programme_id: 7, component: "CODE-A", code: "C1", title: "Penyelenggaraan webinar dan forum regional", pillar: "C - CPMP", division: "CPMP", pic: null, status: "On track", note: null, due_date: null },
+      { id: 50, programme_id: 7, component: "CODE-B", code: "R2", title: "Pengembangan model CODE-B Fase 2 (Coding untuk SMP)", pillar: "R - R&D", division: "R&D", pic: null, status: "Selesai", note: null, due_date: null },
+      { id: 51, programme_id: 7, component: "CODE-B", code: "T2", title: "Peningkatan kapasitas CODE-B", pillar: "T - Capacity Building", division: "Training", pic: null, status: "Belum mulai", note: null, due_date: null },
+      { id: 52, programme_id: 7, component: "CODE-B", code: "C2", title: "Advokasi strategis", pillar: "C - CPMP", division: "CPMP", pic: null, status: "On track", note: null, due_date: null },
+      { id: 53, programme_id: 7, component: "CODE-C", code: "R3", title: "Pengembangan model CODE-C Fase 2 (Coding dan AI untuk SMA)", pillar: "R - R&D", division: "R&D", pic: null, status: "Selesai", note: null, due_date: null },
+      { id: 54, programme_id: 7, component: "CODE-C", code: "T3", title: "Peningkatan kapasitas CODE-C", pillar: "T - Capacity Building", division: "Training", pic: null, status: "On track", note: null, due_date: null },
+      { id: 55, programme_id: 7, component: "AI in the Classroom", code: "R4", title: "Pengembangan model \"AI in the Classroom\" untuk pendidik", pillar: "R - R&D", division: "R&D", pic: null, status: "On track", note: null, due_date: null },
+      { id: 56, programme_id: 7, component: "AI in the Classroom", code: "T4", title: "Pelatihan implementasi AI di ruang kelas", pillar: "T - Capacity Building", division: "Training", pic: null, status: "Ditunda", note: null, due_date: null }
+    );
+
+    // NEXEL (programme_id 8) — 10 aktivitas
+    activities.push(
+      { id: 57, programme_id: 8, component: "STEM Academy", code: "T1", title: "Training of Trainers (ToT) dalam pendidikan STEM", pillar: "T - Capacity Building", division: "Training", pic: null, status: "Perlu perhatian", note: null, due_date: null },
+      { id: 58, programme_id: 8, component: "STEM Leadership", code: "R1", title: "Analisis output program dan dampak sosio-pendidikan", pillar: "R - R&D", division: "R&D", pic: null, status: "Selesai", note: null, due_date: null },
+      { id: 59, programme_id: 8, component: "STEM Academy", code: "C1", title: "Penyelenggaraan workshop dan webinar regional", pillar: "C - CPMP", division: "CPMP", pic: null, status: "Belum mulai", note: null, due_date: null },
+      { id: 60, programme_id: 8, component: "Platform STEM", code: "I1", title: "Pengembangan infrastruktur STEM Online Course", pillar: "I - IT&KM", division: "IT&KM", pic: null, status: "On track", note: null, due_date: null },
+      { id: 61, programme_id: 8, component: "STEM Leadership", code: "T2", title: "ToT dan capacity building untuk 15 sekolah pilot", pillar: "T - Capacity Building", division: "Training", pic: null, status: "Selesai", note: null, due_date: null },
+      { id: 62, programme_id: 8, component: "STEM Leadership", code: "R2", title: "Riset output dan dampak inisiatif mentorship STEM", pillar: "R - R&D", division: "R&D", pic: null, status: "On track", note: null, due_date: null },
+      { id: 63, programme_id: 8, component: "STEM Mentorship", code: "C2", title: "Advokasi strategis dan diseminasi publikasi", pillar: "C - CPMP", division: "CPMP", pic: null, status: "On track", note: null, due_date: null },
+      { id: 64, programme_id: 8, component: "STEM Mentorship", code: "T3", title: "Mentorship STEM bersama Dinas Pendidikan Provinsi/Kabupaten (STEAM, Matematika, CODAP & SAGE, Floaiono)", pillar: "T - Capacity Building", division: "Training", pic: null, status: "Belum mulai", note: null, due_date: null },
+      { id: 65, programme_id: 8, component: "STEM Academy", code: "R3", title: "Pedoman teknis pengembangan dan kurasi kursus daring berkualitas", pillar: "R - R&D", division: "R&D", pic: null, status: "On track", note: null, due_date: null },
+      { id: 66, programme_id: 8, component: "Planetary Wellbeing", code: "T4", title: "Pelatihan Planetary Wellbeing", pillar: "T - Capacity Building", division: "Training", pic: null, status: "Selesai", note: null, due_date: null }
+    );
+
+    // R-MODE (programme_id 4) — 9 aktivitas
+    activities.push(
+      { id: 67, programme_id: 4, component: "Mekanisme Kolaboratif", code: "R1", title: "Mekanisme kolaboratif untuk pendanaan riset bersama", pillar: "R - R&D", division: "R&D", pic: null, status: "On track", note: null, due_date: null },
+      { id: 68, programme_id: 4, component: "Mekanisme Kolaboratif", code: "T1", title: "Mekanisme kolaboratif untuk pendanaan pelatihan bersama", pillar: "T - Capacity Building", division: "Training", pic: null, status: "On track", note: null, due_date: null },
+      { id: 69, programme_id: 4, component: "Mekanisme Kolaboratif", code: "I1", title: "Mekanisme kolaboratif untuk pendanaan infrastruktur TI dan pengembangan platform", pillar: "I - IT&KM", division: "IT&KM", pic: null, status: "Selesai", note: null, due_date: null },
+      { id: 70, programme_id: 4, component: "Mekanisme Kolaboratif", code: "C1", title: "Mekanisme kolaboratif untuk pendanaan kegiatan diseminasi dan publikasi", pillar: "C - CPMP", division: "CPMP", pic: null, status: "On track", note: null, due_date: null },
+      { id: 71, programme_id: 4, component: "Mekanisme Kolaboratif", code: "R2", title: "Pengembangan proposal riset bersama", pillar: "R - R&D", division: "R&D", pic: null, status: "Selesai", note: null, due_date: null },
+      { id: 72, programme_id: 4, component: "Pendanaan Berbasis Mitra", code: "T2", title: "Pendanaan pelatihan yang dipimpin mitra", pillar: "T - Capacity Building", division: "Training", pic: null, status: "Belum mulai", note: null, due_date: null },
+      { id: 73, programme_id: 4, component: "Pendanaan Berbasis Mitra", code: "I2", title: "Pendanaan mitra untuk infrastruktur TI dan pengembangan platform", pillar: "I - IT&KM", division: "IT&KM", pic: null, status: "On track", note: null, due_date: null },
+      { id: 74, programme_id: 4, component: "Pendanaan Berbasis Mitra", code: "C2", title: "Pendanaan mitra untuk kegiatan diseminasi dan publikasi bersama", pillar: "C - CPMP", division: "CPMP", pic: null, status: "Selesai", note: null, due_date: null },
+      { id: 75, programme_id: 4, component: "Grant Acquisition Unit", code: "C3", title: "Operasionalisasi Grant Acquisition Unit", pillar: "C - CPMP", division: "CPMP", pic: null, status: "Belum mulai", note: null, due_date: null }
+    );
+
+    // COALA (programme_id 9) — 5 aktivitas
+    activities.push(
+      { id: 76, programme_id: 9, component: "SEAMEO MEL Outcome 1", code: "R1", title: "Pengukuran efektivitas pembelajaran", pillar: "R - R&D", division: "R&D", pic: null, status: "On track", note: null, due_date: null },
+      { id: 77, programme_id: 9, component: "SEAMEO MEL Outcome 3", code: "R2", title: "Asesmen dampak pelatihan", pillar: "R - R&D", division: "R&D", pic: null, status: "Selesai", note: null, due_date: null },
+      { id: 78, programme_id: 9, component: "SEAMEO MEL Outcome 2", code: "I1", title: "Komunikasi dan manajemen pengetahuan", pillar: "I - IT&KM", division: "IT&KM", pic: null, status: "On track", note: null, due_date: null },
+      { id: 79, programme_id: 9, component: "Laporan Dampak", code: "C1", title: "Penyusunan SEAMOLEC Annual Impact Report", pillar: "C - CPMP", division: "CPMP", pic: null, status: "On track", note: null, due_date: null },
+      { id: 80, programme_id: 9, component: "Dukungan Teknis", code: "T1", title: "Dukungan teknis sistem data dan matriks data MEL", pillar: "T - Capacity Building", division: "Training", pic: null, status: "Belum mulai", note: null, due_date: null }
+    );
+
+    // Alias: `semuaAktivitas` adalah daftar 80 aktivitas yang dipakai bersama
+    // oleh Dashboard dan halaman Aktivitas. Satu sumber, satu kebenaran —
+    // mengubah status dari tabel langsung memperbarui Dashboard.
+    var semuaAktivitas = activities;
+
+    // 10 KPI. `realisation` = data simulasi agar capaian & status dapat dilihat.
+    // Sengaja menyisakan 2 KPI tanpa realisasi supaya keadaan "Belum ada data"
+    // ikut terlihat. Angka di bawah hanyalah contoh untuk keperluan prototipe.
+    var kpis = [
+      {
+        id: 1, category: "Strategi", programme: "PROGRES / ADCEND",
+        indicator: "Jumlah negara anggota SEAMEO yang secara formal mengadopsi atau menyelaraskan regulasi ODL nasional dengan kerangka regional yang disahkan",
+        target: 5, unit: "negara", realisation: 4
+      },
+      {
+        id: 2, category: "Strategi", programme: "FLEXERA / CREATE / CODEA / NEXEL",
+        indicator: "Kenaikan skor kepercayaan employer regional atas kualitas kredensial ODL tersertifikasi SEAMOLEC",
+        target: 0.2, unit: "% kenaikan", realisation: 0.13
+      },
+      {
+        id: 3, category: "Strategi", programme: "R-MODE",
+        indicator: "Persentase dana non-inti yang dialokasikan khusus untuk inisiatif bagi komunitas kurang terlayani",
+        target: 0.4, unit: "% dari dana", realisation: 0.22
+      },
+      {
+        id: 4, category: "Strategi", programme: "AILOS",
+        indicator: "Penurunan konsumsi data (dan estimasi biaya pengguna) untuk konten flagship via platform SEAMOLEC Lite",
+        target: 0.3, unit: "% penurunan", realisation: 0.31
+      },
+      {
+        id: 5, category: "Strategi", programme: "COALA",
+        indicator: "Persentase intervensi ODL utama yang dilacak dengan metrik perubahan kapasitas institusi, bukan sekadar partisipasi",
+        target: 1, unit: "% integrasi", realisation: 0.45
+      },
+      {
+        id: 6, category: "SMART", programme: "Pelatihan & Penelitian",
+        indicator: "Praktisi ODL tersertifikasi, minimum 40% dari komunitas kurang terlayani",
+        target: 1500, unit: "praktisi", realisation: 620
+      },
+      {
+        id: 7, category: "SMART", programme: "TIK & Kesetaraan Digital",
+        indicator: "Proyek percontohan skala besar di negara anggota, termasuk penerapan platform SEAMOLEC Lite",
+        target: 3, unit: "proyek", realisation: null
+      },
+      {
+        id: 8, category: "SMART", programme: "Kebijakan & Konsultasi",
+        indicator: "Kerangka ODL/QA regional yang diadopsi, disertai bantuan teknis ke minimum 80% negara anggota",
+        target: 5, unit: "kerangka", realisation: 5
+      },
+      {
+        id: 9, category: "SMART", programme: "Jejaring & Kemitraan",
+        indicator: "Kemitraan strategis formal baru yang terbentuk, disertai program ODL kolaboratif lintas negara",
+        target: 15, unit: "kemitraan", realisation: 6
+      },
+      {
+        id: 10, category: "SMART", programme: "Keberlanjutan Kelembagaan",
+        indicator: "Peningkatan dana non-inti yang terdiversifikasi",
+        target: 0.5, unit: "% peningkatan", realisation: null
+      }
+    ];
+
+    // 5 tonggak tahunan. `pic`, `status`, `note` null — kolomnya kosong di sumber.
+    var milestones = [
+      {
+        year: 2025,
+        items: [
+          "FYDP resmi diluncurkan",
+          "Lokakarya strategis internal selesai",
+          "Endorsement Governing Board diperoleh"
+        ],
+        pic: null, status: null, note: null
+      },
+      {
+        year: 2026,
+        items: [
+          "Grant Acquisition Unit dibentuk",
+          "Laporan Dampak Tahunan pertama diterbitkan",
+          "Pilot platform SEAMOLEC Lite dimulai"
+        ],
+        pic: null, status: null, note: null
+      },
+      {
+        year: 2027,
+        items: [
+          "Kerangka kebijakan MWG disahkan tiga negara pilot",
+          "SEAMOLEC Lite diterapkan di tiga zona konektivitas rendah"
+        ],
+        pic: null, status: null, note: null
+      },
+      {
+        year: 2028,
+        items: [
+          "Regional ODL Quality Seal operasional di lima negara",
+          "50 pakar QA tersertifikasi",
+          "MEL terintegrasi penuh",
+          "40% dana berbasis kesetaraan tercapai"
+        ],
+        pic: null, status: null, note: null
+      },
+      {
+        year: 2029,
+        items: [
+          "1.500 praktisi tersertifikasi",
+          "15 kemitraan strategis terbentuk",
+          "80% negara anggota dibantu",
+          "50% diversifikasi pendanaan tercapai"
+        ],
+        pic: null, status: null, note: null
+      }
+    ];
+
+    // 5 komponen kerangka M&E. `methods` = daftar metode pengumpulan data.
+    var meComponents = [
+      {
+        component: "MWG Progress & Policy",
+        methods: [
+          "P&C Technical Reports",
+          "Governing Board Minutes",
+          "External Legal Reviews"
+        ],
+        owner: "CPMP",
+        frequency: "Kuartalan & Tahunan",
+        decision_point: "Menyesuaikan prioritas diplomatik dan meningkatkan skala bantuan teknis ST1"
+      },
+      {
+        component: "Financial Health & Equity",
+        methods: [
+          "Grant Acquisition Tracking System",
+          "S&I Financial Reports (Non-Core vs Core)"
+        ],
+        owner: "R&D",
+        frequency: "Bulanan (internal), kuartalan (laporan GB)",
+        decision_point: "Mempertajam target donor dan mengoptimalkan alokasi dana WT2"
+      },
+      {
+        component: "Quality & Credibility",
+        methods: [
+          "Employer/Industry Perception Surveys (sebelum dan sesudah rollout WT3)",
+          "ODL Audit Reports"
+        ],
+        owner: "Training",
+        frequency: "Dua kali setahun",
+        decision_point: "Memvalidasi efektivitas Quality Seal WT3"
+      },
+      {
+        component: "Technology Effectiveness",
+        methods: [
+          "Embedded Platform Analytics (penggunaan low-bandwidth dan retensi pengguna di zona konektivitas rendah)",
+          "Field User Surveys"
+        ],
+        owner: "IT&KM",
+        frequency: "Dua kali setahun (fase pilot), kuartalan (pasca-rollout)",
+        decision_point: "Penyempurnaan platform dan keputusan mainstreaming ST3"
+      },
+      {
+        component: "Institutional Impact",
+        methods: [
+          "Annual Impact Reports",
+          "Longitudinal Graduate Tracking"
+        ],
+        owner: "CPMP",
+        frequency: "Tahunan (publikasi publik)",
+        decision_point: "Membuktikan nilai pendidikan WO2 dan mengamankan komitmen negara anggota"
+      }
+    ];
+
+    // 13 sumber pendanaan: 9 Program + 4 Infrastruktur TI.
+    var fundings = [
+      { category: "Program", item: "AILOS", strategy_code: "ST3", lead_division: "IT&KM",
+        source: "External Grants (target: WT2)",
+        rationale: "Pengembangan teknologi, infrastruktur server (CapEx), optimasi konten, dan biaya deployment pilot terdesentralisasi" },
+      { category: "Program", item: "PROGRES", strategy_code: "ST1", lead_division: "CPMP",
+        source: "Core Budget / Member States",
+        rationale: "Biaya diplomasi tingkat tinggi (perjalanan, konsultasi, rapat Ministerial Working Group)" },
+      { category: "Program", item: "ADCEND", strategy_code: "ST1", lead_division: "CPMP",
+        source: "Core Budget / Member States",
+        rationale: "Biaya diplomasi tingkat tinggi (perjalanan, konsultasi, rapat Ministerial Working Group)" },
+      { category: "Program", item: "R-MODE", strategy_code: "WT2", lead_division: "CPMP",
+        source: "Core Budget (pendirian unit) / External Grants",
+        rationale: "Gaji personel Grant Acquisition Unit, lisensi software, perjalanan engagement donor" },
+      { category: "Program", item: "FLEXERA", strategy_code: "WT3", lead_division: "Training",
+        source: "Core Budget / Fee-for-Service (sinergi SO1)",
+        rationale: "Pengembangan kurikulum Quality Seal, pelatihan pengajar, dan biaya audit QA eksternal" },
+      { category: "Program", item: "CREATE", strategy_code: "WT3", lead_division: "Training",
+        source: "Core Budget / Fee-for-Service (sinergi SO1)",
+        rationale: "Pengembangan kurikulum Quality Seal, pelatihan pengajar, dan biaya audit QA eksternal" },
+      { category: "Program", item: "CODEA", strategy_code: "WT3", lead_division: "Training",
+        source: "Core Budget / Fee-for-Service (sinergi SO1)",
+        rationale: "Pengembangan kurikulum Quality Seal, pelatihan pengajar, dan biaya audit QA eksternal" },
+      { category: "Program", item: "NEXEL", strategy_code: "WT3", lead_division: "Training",
+        source: "Core Budget / Fee-for-Service (sinergi SO1)",
+        rationale: "Pengembangan kurikulum Quality Seal, pelatihan pengajar, dan biaya audit QA eksternal" },
+      { category: "Program", item: "COALA", strategy_code: "WO2", lead_division: "R&D",
+        source: "Core Budget / Host Ministry (Renstra)",
+        rationale: "Konsultansi eksternal desain kerangka MEL, integrasi software learning analytics, dan pelatihan staf data" },
+      { category: "Infrastruktur TI", item: "SEAMOLEC Lite Platform", strategy_code: "ST1 & ST3", lead_division: "IT&KM",
+        source: "External Grants / CapEx",
+        rationale: "Esensial untuk mitigasi Digital Divide dan menjangkau komunitas kurang terlayani" },
+      { category: "Infrastruktur TI", item: "Centralized MEL Dashboard", strategy_code: "WO2, WT2, ST3", lead_division: "R&D",
+        source: "Core Budget / Host Ministry",
+        rationale: "Memungkinkan transparansi data, pelacakan longitudinal, dan penghasil bukti untuk mengamankan pendanaan" },
+      { category: "Infrastruktur TI", item: "Regional QA Audit Tools", strategy_code: "WT3 & ST1", lead_division: "Training",
+        source: "Core Budget / Fee-for-Service",
+        rationale: "Alat digital untuk menstandardisasi evaluasi QA dan mensertifikasi 50 pakar regional" },
+      { category: "Infrastruktur TI", item: "Secure Digital Policy Platform", strategy_code: "ST1", lead_division: "CPMP",
+        source: "Core Budget / Member States",
+        rationale: "Memfasilitasi dialog kebijakan lintas batas yang bersifat rahasia bagi MWG" }
+    ];
+
+    /* ============================================================
+       ATURAN HITUNG (field turunan — tidak disimpan)
+       ============================================================ */
+
+    /**
+     * Capaian KPI = realisasi / target.
+     * Kembalikan null bila realisasi kosong, atau target nol / kosong.
+     * Tidak pernah mengembalikan 0% atau NaN untuk data kosong.
+     */
+    function hitungCapaian(realisasi, target) {
+      if (realisasi === null || realisasi === undefined) return null;
+      if (target === null || target === undefined || target === 0) return null;
+      if (!isFinite(realisasi) || !isFinite(target)) return null;
+      return realisasi / target;
+    }
+
+    /**
+     * Progres flagship = jumlah aktivitas Selesai / total aktivitas flagship x 100%.
+     * Bila flagship belum punya aktivitas, kembalikan null (bukan 0%).
+     */
+    function hitungProgres(programmeId, sumber) {
+      var anggota = (sumber || semuaAktivitas).filter(function (a) { return a.programme_id === programmeId; });
+      var total = anggota.length;
+      if (total === 0) return null;
+      var selesai = anggota.filter(function (a) { return a.status === "Selesai"; }).length;
+      return (selesai / total) * 100;
+    }
+
+    /** Aktivitas berisiko: status Perlu perhatian / Ditunda, atau lewat tenggat. */
+    function ambilRisiko(sumber) {
+      var hariIni = new Date();
+      hariIni.setHours(0, 0, 0, 0);
+
+      return (sumber || semuaAktivitas).reduce(function (kumpulan, a) {
+        var alasan = null;
+
+        if (a.status === "Perlu perhatian" || a.status === "Ditunda") {
+          alasan = a.status;
+        } else if (a.due_date) {
+          var tenggat = new Date(a.due_date + "T00:00:00");
+          if (!isNaN(tenggat.getTime()) && tenggat < hariIni && a.status !== "Selesai") {
+            alasan = "Lewat tenggat";
+          }
+        }
+
+        if (alasan) kumpulan.push({ activity: a, reason: alasan });
+        return kumpulan;
+      }, []);
+    }
+
+    /* ============================================================
+       PEMBANTU TAMPILAN
+       ============================================================ */
+
+    function el(tag, kelas, teks) {
+      var n = document.createElement(tag);
+      if (kelas) n.className = kelas;
+      if (teks !== undefined && teks !== null) n.textContent = teks;
+      return n;
+    }
+
+    /** Kelas pill berdasarkan label status — warna wajib konsisten. */
+    function kelasStatus(label) {
+      if (label === "Selesai" || label === "Tercapai") return "pill pill-selesai";
+      if (label === "On track") return "pill pill-ontrack";
+      if (label === "Perlu perhatian" || label === "Ditunda") return "pill pill-perhatian";
+      return "pill pill-netral"; // Belum mulai / Belum ada data / Lewat tenggat
+    }
+
+    /**
+     * Pill status — selalu menyertakan label teks, warna hanya pelengkap.
+     * `sebagaiWarna` dipakai untuk varian "Lewat tenggat" yang memakai palet merah.
+     */
+    function buatPill(label, pakaiPaletMerah) {
+      var p = el("span", pakaiPaletMerah ? "pill pill-perhatian" : kelasStatus(label));
+      p.appendChild(el("span", "pill-titik"));
+      p.appendChild(document.createTextNode(label));
+      return p;
+    }
+
+    /** Format angka: 1500 -> "1.500", 0.5 -> "50%", 3 -> "3". */
+    function formatAngka(nilai, satuan) {
+      if (satuan && satuan.indexOf("%") === 0) return Math.round(nilai * 100) + "%";
+      return new Intl.NumberFormat("id-ID").format(nilai);
+    }
+
+    function formatPersen(p) {
+      return p.toFixed(1).replace(".", ",") + "%";
+    }
+
+    /* ============================================================
+       1. KARTU SMART OBJECTIVE 2029
+       ============================================================ */
+
+    var smartMeta = [
+      { kode: "SMART 01", keterangan: "Praktisi ODL tersertifikasi, minimum 40% dari komunitas kurang terlayani." },
+      { kode: "SMART 02", keterangan: "Proyek percontohan skala besar di negara anggota, termasuk penerapan platform SEAMOLEC Lite." },
+      { kode: "SMART 03", keterangan: "Kerangka ODL/QA regional yang diadopsi, disertai bantuan teknis ke minimum 80% negara anggota." },
+      { kode: "SMART 04", keterangan: "Kemitraan strategis formal baru, disertai program ODL kolaboratif lintas negara." },
+      { kode: "SMART 05", keterangan: "Peningkatan dana non-inti yang terdiversifikasi." }
+    ];
+
+    function gambarKartuSmart() {
+      var wadah = document.getElementById("grid-smart");
+      wadah.textContent = "";
+
+      // Hanya kategori SMART yang tampil sebagai kartu di Dashboard,
+      // supaya sejajar dengan smartMeta (5 entri).
+      var kpiSmart = kpis.filter(function (k) { return k.category === "SMART"; });
+
+      if (kpiSmart.length === 0) {
+        wadah.appendChild(buatKosong({
+          baris: true,
+          judul: "Belum ada target SMART",
+          teks: "Target SMART 2029 dimuat dari Papan KPI. Isi indikator kategori SMART terlebih dahulu."
+        }));
+        return;
+      }
+
+      kpiSmart.forEach(function (kpi, i) {
+        var meta = smartMeta[i];
+        var capaian = hitungCapaian(kpi.realisation, kpi.target);
+
+        var kartu = el("article", "kartu");
+
+        // kepala: kode + status pill
+        var kepala = el("div", "kartu-kepala");
+        kepala.appendChild(el("span", "kartu-kode", meta.kode));
+        // Status KPI: tanpa realisasi -> "Belum ada data"
+        var statusLabel = capaian === null
+          ? "Belum ada data"
+          : (capaian >= 1 ? "Tercapai" : (capaian >= 0.7 ? "On track" : "Perlu perhatian"));
+        kepala.appendChild(buatPill(statusLabel));
+        kartu.appendChild(kepala);
+
+        // nilai target + satuan
+        var nilai = el("p", "kartu-nilai");
+        nilai.appendChild(document.createTextNode(formatAngka(kpi.target, kpi.unit)));
+        nilai.appendChild(el("span", "kartu-satuan", kpi.unit));
+        kartu.appendChild(nilai);
+
+        // keterangan target
+        kartu.appendChild(el("p", "kartu-keterangan", meta.keterangan));
+
+        // kaki: bilah capaian + angka capaian
+        var kaki = el("div", "kartu-kaki");
+
+        var bilah = el("div", "bilah");
+        bilah.setAttribute("role", "img");
+        var isi = el("div", "bilah-isi");
+
+        if (capaian === null) {
+          // Data kosong: bilah netral, tanpa angka 0%/NaN.
+          bilah.setAttribute("aria-label", "Capaian belum tersedia: data realisasi belum diisi.");
+          isi.className = "bilah-isi bilah-tanpa";
+          isi.style.width = "0%";
+        } else {
+          var persen = Math.max(0, Math.min(capaian, 1)) * 100;
+          bilah.setAttribute(
+            "aria-label",
+            "Capaian " + formatPersen(capaian * 100) + " dari target."
+          );
+          isi.style.width = persen + "%";
+        }
+        bilah.appendChild(isi);
+        kaki.appendChild(bilah);
+
+        var barisCap = el("div", "kartu-capaian");
+        barisCap.appendChild(el("span", null, "Capaian"));
+        barisCap.appendChild(el("span", null, capaian === null ? "Belum ada data" : formatPersen(capaian * 100)));
+        kaki.appendChild(barisCap);
+
+        kartu.appendChild(kaki);
+        wadah.appendChild(kartu);
+      });
+    }
+
+    /* ============================================================
+       2. PROGRES PER FLAGSHIP
+       ============================================================ */
+
+    function gambarProgresFlagship() {
+      var daftar = document.getElementById("daftar-flagship");
+      daftar.textContent = "";
+
+      if (programmes.length === 0) {
+        daftar.appendChild(buatKosong({
+          baris: true,
+          judul: "Belum ada flagship terdaftar",
+          teks: "Progres dihitung dari aktivitas per flagship. Tambahkan program terlebih dahulu."
+        }));
+        document.getElementById("catatan-flagship").textContent = "Belum ada data";
+        return;
+      }
+
+      programmes.forEach(function (p) {
+        var progres = hitungProgres(p.id);
+        var anggota = activities.filter(function (a) { return a.programme_id === p.id; });
+        var selesai = anggota.filter(function (a) { return a.status === "Selesai"; }).length;
+
+        var li = el("li");
+        var baris = el("div", "flagship-baris");
+
+        // identitas
+        var identitas = el("div", "flagship-identitas");
+        identitas.appendChild(el("div", "flagship-akronim", p.acronym));
+        identitas.appendChild(el("div", "flagship-nama", p.full_name));
+        baris.appendChild(identitas);
+
+        // kode strategi
+        baris.appendChild(el("span", "kode-strategi", p.strategy_code));
+
+        // divisi pemimpin
+        baris.appendChild(el("span", "flagship-divisi", p.lead_division));
+
+        // bilah progres
+        var bilah = el("div", "bilah");
+        var isi = el("div", "bilah-isi");
+        if (progres === null) {
+          bilah.setAttribute("role", "img");
+          bilah.setAttribute("aria-label", p.acronym + ": belum ada aktivitas terdaftar.");
+          isi.className = "bilah-isi bilah-tanpa";
+          isi.style.width = "0%";
+        } else {
+          bilah.setAttribute("role", "img");
+          bilah.setAttribute(
+            "aria-label",
+            p.acronym + ": " + formatPersen(progres) + " selesai, " + selesai + " dari " + anggota.length + " aktivitas."
+          );
+          isi.style.width = progres + "%";
+        }
+        bilah.appendChild(isi);
+        baris.appendChild(bilah);
+
+        // pecahan selesai/total + persen
+        var pecahan = el("div", "flagship-pecahan");
+        var b = el("b", null, selesai + "/" + anggota.length);
+        pecahan.appendChild(b);
+        pecahan.appendChild(document.createTextNode(" · " + (progres === null ? "—" : formatPersen(progres))));
+        baris.appendChild(pecahan);
+
+        li.appendChild(baris);
+        daftar.appendChild(li);
+      });
+
+      var totalAktivitas = activities.length;
+      document.getElementById("catatan-flagship").textContent =
+        programmes.length + " flagship · " + totalAktivitas + " aktivitas";
+    }
+
+    /* ============================================================
+       3. PERLU PERHATIAN
+       ============================================================ */
+
+    function gambarRisiko() {
+      var wadah = document.getElementById("daftar-risiko");
+      wadah.textContent = "";
+
+      var risiko = ambilRisiko();
+
+      document.getElementById("catatan-risiko").textContent =
+        risiko.length === 0 ? "Tidak ada" : risiko.length + " aktivitas";
+
+      if (risiko.length === 0) {
+        wadah.appendChild(buatKosong({
+          baris: true,
+          judul: "Tidak ada aktivitas berisiko",
+          teks: "Semua aktivitas berstatus On track, Belum mulai, atau Selesai dan tidak ada tenggat yang terlewat."
+        }));
+        return;
+      }
+
+      var daftar = el("ul", "risiko-daftar");
+
+      risiko.forEach(function (item) {
+        var a = item.activity;
+        var p = programmes.filter(function (x) { return x.id === a.programme_id; })[0];
+
+        var li = el("li");
+        var baris = el("div", "risiko-baris");
+
+        var kiri = el("div");
+        kiri.appendChild(el("div", "risiko-nama", a.title));
+
+        var meta = el("div", "risiko-meta");
+        meta.appendChild(el("span", null, p ? p.acronym : "—"));
+        meta.appendChild(el("span", a.pic ? null : "teks-kosong", "PIC: " + (a.pic || "Belum ditugaskan")));
+        kiri.appendChild(meta);
+        baris.appendChild(kiri);
+
+        baris.appendChild(buatPill(item.reason, item.reason === "Lewat tenggat"));
+
+        li.appendChild(baris);
+        daftar.appendChild(li);
+      });
+
+      wadah.appendChild(daftar);
+    }
+
+    /* ============================================================
+       HALAMAN AKTIVITAS
+       ============================================================ */
+
+    // 10 kolom, urutannya persis sesuai permintaan.
+    var KOLOM = [
+      { key: "no",        label: "No",               kelas: "k-no",    sortable: true },
+      { key: "flagship",  label: "Flagship",         kelas: "k-flag",  sortable: true },
+      { key: "component", label: "Program/Komponen", kelas: "k-komp",  sortable: true },
+      { key: "code",      label: "Kode",             kelas: "k-kode",  sortable: true },
+      { key: "title",     label: "Aktivitas",        kelas: "k-akt",   sortable: true },
+      { key: "pillar",    label: "Pilar",            kelas: "k-pilar", sortable: true },
+      { key: "division",  label: "Divisi Pelaksana", kelas: "k-div",   sortable: true },
+      { key: "pic",       label: "PIC",              kelas: "k-pic",   sortable: true },
+      { key: "status",    label: "Status",           kelas: "k-stat",  sortable: true },
+      { key: "note",      label: "Catatan",          kelas: "k-cat",   sortable: false }
+    ];
+
+    var SEMUA_STATUS = ["Belum mulai", "On track", "Perlu perhatian", "Selesai", "Ditunda"];
+
+    var PILAR_DAFTAR = [
+      { kode: "T", label: "T - Capacity Building" },
+      { kode: "R", label: "R - R&D" },
+      { kode: "I", label: "I - IT&KM" },
+      { kode: "C", label: "C - CPMP" }
+    ];
+
+    // Riwayat pembaruan: belum ada di sumber, jadi kosong.
+    var progressUpdates = [];
+
+    /* ============================================================
+       KEADAAN MEMUAT (SKELETON) & KEADAAN KOSONG (EMPTYSTATE)
+       Dipakai bersama oleh semua halaman supaya perilakunya seragam.
+       ============================================================ */
+
+    var IKON_KOSONG = '<svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+      '<path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h6.5" stroke="currentColor" stroke-width="1.3" ' +
+      'stroke-linecap="round"/></svg>';
+
+    var IKON_KOSONG_BARIS = '<svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+      '<circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/>' +
+      '<path d="M5.4 8.2l1.7 1.7 3.5-3.6" stroke="currentColor" stroke-width="1.5" ' +
+      'stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    /* Kotak keadaan kosong: ikon bulat + judul + keterangan + satu aksi
+       opsional. Selalu disertai teks, tidak pernah hanya gambar. */
+    function buatKosong(opsi) {
+      var kotak = el("div", "kosong");
+
+      var ikon = el("div", "kosong-ikon");
+      ikon.innerHTML = opsi.baris ? IKON_KOSONG_BARIS : IKON_KOSONG;
+      kotak.appendChild(ikon);
+
+      kotak.appendChild(el("p", "kosong-judul", opsi.judul));
+      if (opsi.teks) kotak.appendChild(el("p", "kosong-teks", opsi.teks));
+
+      if (opsi.aksi) {
+        var btn = el("button", "tombol " + (opsi.aksi.utama === false ? "tombol-biasa" : "tombol-utama"),
+                     opsi.aksi.label);
+        btn.type = "button";
+        btn.addEventListener("click", opsi.aksi.klik);
+        kotak.appendChild(btn);
+      }
+
+      return kotak;
+    }
+
+    /* Beberapa bentuk skeleton siap pakai — bentuknya mengikuti tata letak
+       akhir supaya tidak ada lompatan tata letak saat data masuk. */
+    function skGaris(lebar, tinggi) {
+      var g = el("div", "skeleton");
+      g.style.height = (tinggi || 12) + "px";
+      g.style.width = lebar;
+      return g;
+    }
+
+    function skKartu() {
+      var k = el("div", "sk-kartu");
+      k.appendChild(skGaris("62%", 14));
+      k.appendChild(skGaris("100%", 26));
+      k.appendChild(skGaris("44%", 12));
+      return k;
+    }
+
+    function skBarisDaftar() {
+      var b = el("div", "sk-baris");
+      var kiri = el("div");
+      kiri.style.flex = "1 1 auto";
+      kiri.style.display = "flex";
+      kiri.style.flexDirection = "column";
+      kiri.style.gap = "var(--s-2)";
+      kiri.appendChild(skGaris("46%", 13));
+      kiri.appendChild(skGaris("26%", 11));
+      b.appendChild(kiri);
+      var pil = el("div", "skeleton");
+      pil.style.width = "86px";
+      pil.style.height = "20px";
+      b.appendChild(pil);
+      return b;
+    }
+
+    function skBarisTabel() {
+      var b = el("div", "sk-tabel-baris");
+      b.appendChild(skGaris("100%", 12));
+      b.appendChild(skGaris("100%", 12));
+      b.appendChild(skGaris("88%", 12));
+      b.appendChild(skGaris("70%", 12));
+      b.appendChild(skGaris("100%", 12));
+      b.appendChild(skGaris("64%", 12));
+      return b;
+    }
+
+    /* Isi wadah dengan skeleton sekaligus beri tahu pembaca layar bahwa
+       isi sedang dimuat. Warna shimmer dinonaktifkan lewat CSS bila
+       pengguna memilih "kurangi gerak". */
+    function tampilkanMemuat(wadah, bentuk, jumlah, teks) {
+      wadah.textContent = "";
+      wadah.setAttribute("aria-busy", "true");
+
+      var status = el("p", "sr-only", teks || "Memuat data…");
+      status.setAttribute("role", "status");
+      status.setAttribute("aria-live", "polite");
+      wadah.appendChild(status);
+
+      var n = jumlah || 3;
+      for (var i = 0; i < n; i++) wadah.appendChild(bentuk());
+
+      return status;
+    }
+
+    function selesaiMemuat(wadah) {
+      wadah.removeAttribute("aria-busy");
+    }
+
+    /* Jalankan penggambaran segera setelah satu bingkai, sehingga skeleton
+       sempat terlihat sebelum data menimpa wadah. Menghormati
+       prefers-reduced-motion dengan jalan seketika. */
+    var kurangiGerak = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function setelahMemuat(fn) {
+      if (kurangiGerak) { fn(); return; }
+      window.requestAnimationFrame(function () {
+        window.requestAnimationFrame(fn);
+      });
+    }
+
+    var filter = { flagship: "", divisi: "", pilar: "", status: "", cari: "" };
+    var urut = { key: "no", arah: "asc" };
+    var idTerpilih = null;
+
+    function programmeDari(id) {
+      return programmes.filter(function (p) { return p.id === id; })[0] || null;
+    }
+
+    function labelFlagship(id) {
+      var p = programmeDari(id);
+      return p ? p.acronym : String(id);
+    }
+
+    /* -- Saring + urutkan ---------------------------------------- */
+    function ambilHasil() {
+      var cari = filter.cari.trim().toLowerCase();
+
+      var hasil = activities.filter(function (a) {
+        if (filter.flagship && String(a.programme_id) !== filter.flagship) return false;
+        if (filter.divisi && a.division !== filter.divisi) return false;
+        if (filter.pilar && a.pillar !== filter.pilar) return false;
+        if (filter.status && a.status !== filter.status) return false;
+
+        if (cari) {
+          var gabung = [
+            labelFlagship(a.programme_id), a.component, a.code, a.title,
+            a.pillar, a.division, a.pic || "", a.status || "", a.note || ""
+          ].join(" ").toLowerCase();
+          if (gabung.indexOf(cari) === -1) return false;
+        }
+        return true;
+      });
+
+      var arah = urut.arah === "asc" ? 1 : -1;
+      hasil.sort(function (x, y) {
+        var vx = nilaiUrut(x, urut.key);
+        var vy = nilaiUrut(y, urut.key);
+        if (vx === vy) return x.id - y.id;
+        return vx > vy ? arah : -arah;
+      });
+
+      return hasil;
+    }
+
+    function nilaiUrut(a, key) {
+      switch (key) {
+        case "no": return a.id;
+        case "flagship": return labelFlagship(a.programme_id);
+        case "component": return a.component;
+        case "code": return a.code;
+        case "title": return a.title;
+        case "pillar": return a.pillar;
+        case "division": return a.division;
+        // Nilai kosong diletakkan di akhir untuk urutan menaik.
+        case "pic": return a.pic === null ? "\uffff" : a.pic;
+        case "status": return a.status === null ? "\uffff" : urutanStatus(a.status);
+        case "note": return a.note === null ? "\uffff" : a.note;
+        default: return a.id;
+      }
+    }
+
+    function urutanStatus(s) {
+      var i = SEMUA_STATUS.indexOf(s);
+      return i === -1 ? "z" : String(i);
+    }
+
+    /* -- Bangun header tabel ------------------------------------- */
+    function gambarKepalaTabel() {
+      var tr = document.getElementById("tabel-kepala");
+      tr.textContent = "";
+
+      KOLOM.forEach(function (k) {
+        var th = el("th", k.kelas);
+        th.setAttribute("scope", "col");
+
+        if (!k.sortable) {
+          th.appendChild(el("span", "urut-tombol", k.label));
+          th.querySelector(".urut-tombol").style.cursor = "default";
+          tr.appendChild(th);
+          return;
+        }
+
+        var btn = el("button", "urut-tombol");
+        btn.type = "button";
+        btn.setAttribute("data-sort", k.key);
+        btn.appendChild(document.createTextNode(k.label));
+
+        var ikon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        ikon.setAttribute("class", "urut-ikon");
+        ikon.setAttribute("viewBox", "0 0 10 10");
+        ikon.setAttribute("aria-hidden", "true");
+        ikon.innerHTML = '<path d="M5 1l3 4H2z" fill="currentColor"/><path d="M5 9L2 5h6z" fill="currentColor" opacity="0.35"/>';
+        btn.appendChild(ikon);
+
+        if (urut.key === k.key) {
+          btn.setAttribute("aria-sort", urut.arah === "asc" ? "ascending" : "descending");
+        }
+
+        btn.addEventListener("click", function () {
+          if (urut.key === k.key) {
+            urut.arah = urut.arah === "asc" ? "desc" : "asc";
+          } else {
+            urut.key = k.key;
+            urut.arah = "asc";
+          }
+          gambarKepalaTabel();
+          gambarTabel();
+        });
+
+        th.appendChild(btn);
+        tr.appendChild(th);
+      });
+    }
+
+    /* -- Bangun isi tabel ---------------------------------------- */
+    function gambarTabel() {
+      var hasil = ambilHasil();
+      var tbody = document.getElementById("tabel-isi");
+      tbody.textContent = "";
+
+      // Hitungan hasil filter
+      var hitung = document.getElementById("filter-hitung");
+      hitung.textContent = "";
+      hitung.appendChild(document.createTextNode("Menampilkan "));
+      hitung.appendChild(el("b", null, String(hasil.length)));
+      hitung.appendChild(document.createTextNode(" dari " + activities.length + " aktivitas"));
+
+      // EmptyState
+      var kotakTabel = document.getElementById("tabel-bungkus");
+      var kotakKosong = document.getElementById("hasil-kosong");
+
+      if (hasil.length === 0) {
+        kotakTabel.hidden = true;
+        kotakKosong.hidden = false;
+        gambarKosong(kotakKosong);
+        return;
+      }
+
+      kotakTabel.hidden = false;
+      kotakKosong.hidden = true;
+
+      hasil.forEach(function (a) {
+        var tr = el("tr");
+        tr.setAttribute("data-id", String(a.id));
+        if (a.status === "Perlu perhatian" || a.status === "Ditunda") {
+          tr.setAttribute("data-risiko", "");
+        }
+        if (a.id === idTerpilih) tr.setAttribute("data-terpilih", "");
+
+        tr.addEventListener("click", function (e) {
+          // Klik pada tombol pill status tidak ikut membuka drawer.
+          if (e.target.closest && e.target.closest("button")) return;
+          bukaDrawer(a.id);
+        });
+
+        // No
+        tr.appendChild(td(a.id, "td-no"));
+
+        // Flagship
+        var tdF = el("td", "td-flag");
+        tdF.textContent = labelFlagship(a.programme_id);
+        tr.appendChild(tdF);
+
+        // Program/Komponen
+        tr.appendChild(td(a.component, "td-sub"));
+
+        // Kode
+        tr.appendChild(td(a.code, "td-sub"));
+
+        // Aktivitas — teks membungkus
+        tr.appendChild(td(a.title, "td-aktivitas"));
+
+        // Pilar
+        var tdP = el("td");
+        var spanP = el("span", "pilar-sel");
+        var kodePilar = a.pillar.charAt(0);
+        spanP.appendChild(el("span", "pilar-tanda", kodePilar));
+        spanP.appendChild(el("span", "pilar-nama", a.pillar));
+        tdP.appendChild(spanP);
+        tr.appendChild(tdP);
+
+        // Divisi Pelaksana
+        tr.appendChild(td(a.division, "td-sub"));
+
+        // PIC — kolom kosong di sumber ditampilkan sebagai "Belum ditugaskan",
+        // memakai warna teks sekunder. Tidak ada nama yang dikarang.
+        if (a.pic) {
+          tr.appendChild(td(a.pic, "td-sub"));
+        } else {
+          tr.appendChild(td("Belum ditugaskan", "td-kosong"));
+        }
+
+        // Status — pill yang bisa diklik (inline edit)
+        var tdS = el("td");
+        tdS.appendChild(buatPillTombol(a));
+        tr.appendChild(tdS);
+
+        // Catatan — teks membungkus
+        if (a.note) {
+          tr.appendChild(td(a.note, "td-sub"));
+        } else {
+          tr.appendChild(td("—", "td-kosong"));
+        }
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    function td(teks, kelas) {
+      var sel = el("td", kelas || null);
+      sel.textContent = teks;
+      return sel;
+    }
+
+    /**
+     * Pill status sebagai tombol: klik untuk mengubah status langsung dari tabel.
+     * Label teks selalu tampil; "Belum diisi" bila status masih null.
+     */
+    function buatPillTombol(a) {
+      var label = a.status === null ? "Belum diisi" : a.status;
+      var kelas = a.status === null ? "pill pill-netral" : kelasStatus(label);
+
+      var btn = el("button", kelas + " pill-tombol");
+      btn.type = "button";
+      btn.setAttribute("data-status-id", String(a.id));
+      btn.setAttribute(
+        "aria-label",
+        "Ubah status aktivitas nomor " + a.id + ", " + a.title + ". Status saat ini: " + label + "."
+      );
+      btn.setAttribute("aria-haspopup", "listbox");
+      btn.setAttribute("aria-expanded", "false");
+
+      btn.appendChild(el("span", "pill-titik"));
+      btn.appendChild(document.createTextNode(label));
+      btn.appendChild(el("span", "pill-panah", "\u25BE"));
+
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        bukaPemilihStatus(btn, a);
+      });
+
+      return btn;
+    }
+
+    /* -- Pemilih status (menu kecil di bawah pill) ---------------- */
+    var menuStatus = null;
+    var pemicuStatus = null;
+
+    function tutupPemilihStatus() {
+      if (menuStatus && menuStatus.parentNode) menuStatus.parentNode.removeChild(menuStatus);
+      if (pemicuStatus) pemicuStatus.setAttribute("aria-expanded", "false");
+      menuStatus = null;
+      pemicuStatus = null;
+    }
+
+    function bukaPemilihStatus(btn, a) {
+      if (pemicuStatus === btn) { tutupPemilihStatus(); return; }
+      tutupPemilihStatus();
+
+      var menu = el("div", "menu-status");
+      menu.setAttribute("role", "listbox");
+      menu.setAttribute("aria-label", "Pilih status untuk aktivitas nomor " + a.id);
+
+      SEMUA_STATUS.forEach(function (s) {
+        var opt = el("button", "menu-opsi");
+        opt.type = "button";
+        opt.setAttribute("role", "option");
+        if (a.status === s) opt.setAttribute("aria-selected", "true");
+        opt.appendChild(el("span", kelasStatus(s).replace("pill ", "") + " menu-titik"));
+        opt.appendChild(document.createTextNode(s));
+
+        opt.addEventListener("click", function () {
+          ubahStatus(a, s);
+          tutupPemilihStatus();
+        });
+        menu.appendChild(opt);
+      });
+
+      // Opsi mengembalikan ke kosong, agar konsisten dengan data sumber.
+      var optKosong = el("button", "menu-opsi menu-opsi-kosong");
+      optKosong.type = "button";
+      optKosong.setAttribute("role", "option");
+      if (a.status === null) optKosong.setAttribute("aria-selected", "true");
+      optKosong.appendChild(document.createTextNode("Kosongkan status"));
+      optKosong.addEventListener("click", function () {
+        ubahStatus(a, null);
+        tutupPemilihStatus();
+      });
+      menu.appendChild(optKosong);
+
+      document.body.appendChild(menu);
+
+      var r = btn.getBoundingClientRect();
+      var tinggiMenu = menu.offsetHeight;
+      var ruangBawah = window.innerHeight - r.bottom;
+      var atas = ruangBawah < tinggiMenu + 12 ? r.top - tinggiMenu - 4 : r.bottom + 4;
+      menu.style.top = Math.max(8, atas) + "px";
+      menu.style.left = Math.min(r.left, window.innerWidth - menu.offsetWidth - 8) + "px";
+
+      pemicuStatus = btn;
+      btn.setAttribute("aria-expanded", "true");
+      menuStatus = menu;
+
+      var pertama = menu.querySelector(".menu-opsi");
+      if (pertama) pertama.focus();
+
+      menu.addEventListener("keydown", function (e) {
+        var opsi = Array.prototype.slice.call(menu.querySelectorAll(".menu-opsi"));
+        var i = opsi.indexOf(document.activeElement);
+        if (e.key === "ArrowDown") { e.preventDefault(); opsi[(i + 1) % opsi.length].focus(); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); opsi[(i - 1 + opsi.length) % opsi.length].focus(); }
+        else if (e.key === "Escape") { e.preventDefault(); tutupPemilihStatus(); if (pemicuStatus) pemicuStatus.focus(); }
+      });
+    }
+
+    /** Ubah status + catat ke riwayat pembaruan. */
+    function ubahStatus(a, statusBaru) {
+      var sebelum = a.status;
+      if (sebelum === statusBaru) return;
+
+      a.status = statusBaru;
+      progressUpdates.unshift({
+        id: progressUpdates.length + 1,
+        activity_id: a.id,
+        author: "Pengguna prototipe",
+        timestamp: new Date().toISOString(),
+        status_before: sebelum,
+        status_after: statusBaru,
+        comment: null
+      });
+
+      // Sinkronkan ke model data lengkap agar Dashboard ikut berubah.
+      var asli = semuaAktivitas.filter(function (x) { return x.id === a.id; })[0];
+      if (asli) { asli.status = statusBaru; asli.note = a.note; }
+
+      gambarTabel();
+      if (!document.getElementById("drawer").hidden) bukaDrawer(a.id);
+      segarkanDashboard();
+    }
+
+    /* -- EmptyState --------------------------------------------- */
+    function gambarKosong(wadah) {
+      wadah.textContent = "";
+      wadah.appendChild(buatKosong({
+        baris: true,
+        judul: "Tidak ada aktivitas yang cocok",
+        teks: "Kombinasi filter dan kata kunci tidak menemukan satu pun dari " +
+              activities.length + " aktivitas. Longgarkan filter untuk melihat hasil lainnya.",
+        aksi: { label: "Reset filter", klik: resetFilter }
+      }));
+    }
+
+    /* -- Filter ------------------------------------------------ */
+    function isiPilihan() {
+      var selF = document.getElementById("f-flagship");
+      selF.appendChild(new Option("Semua flagship", ""));
+      programmes.forEach(function (p) {
+        selF.appendChild(new Option(p.acronym + " — " + p.full_name, String(p.id)));
+      });
+
+      var selD = document.getElementById("f-divisi");
+      selD.appendChild(new Option("Semua divisi", ""));
+      divisions.forEach(function (d) {
+        selD.appendChild(new Option(d.name, d.code));
+      });
+
+      var selP = document.getElementById("f-pilar");
+      selP.appendChild(new Option("Semua pilar", ""));
+      PILAR_DAFTAR.forEach(function (p) {
+        selP.appendChild(new Option(p.label, p.label));
+      });
+
+      var selS = document.getElementById("f-status");
+      selS.appendChild(new Option("Semua status", ""));
+      SEMUA_STATUS.forEach(function (s) {
+        selS.appendChild(new Option(s, s));
+      });
+
+      [["f-flagship", "flagship"], ["f-divisi", "divisi"], ["f-pilar", "pilar"], ["f-status", "status"]]
+        .forEach(function (pasangan) {
+          document.getElementById(pasangan[0]).addEventListener("change", function (e) {
+            filter[pasangan[1]] = e.target.value;
+            gambarTabel();
+          });
+        });
+
+      var kotakCari = document.getElementById("f-cari");
+      kotakCari.addEventListener("input", function (e) {
+        filter.cari = e.target.value;
+        gambarTabel();
+      });
+
+      document.getElementById("tombol-reset").addEventListener("click", resetFilter);
+      document.getElementById("tombol-ekspor-aktivitas").addEventListener("click", eksporCsv);
+    }
+
+    function resetFilter() {
+      filter = { flagship: "", divisi: "", pilar: "", status: "", cari: "" };
+      document.getElementById("f-flagship").value = "";
+      document.getElementById("f-divisi").value = "";
+      document.getElementById("f-pilar").value = "";
+      document.getElementById("f-status").value = "";
+      document.getElementById("f-cari").value = "";
+      gambarTabel();
+      document.getElementById("f-cari").focus();
+    }
+
+    /* -- Ekspor CSV (baris hasil filter) ------------------------- */
+    function eksporCsv() {
+      var hasil = ambilHasil();
+      var baris = [KOLOM.map(function (k) { return k.label; })];
+
+      hasil.forEach(function (a) {
+        baris.push([
+          a.id, labelFlagship(a.programme_id), a.component, a.code, a.title,
+          a.pillar, a.division, a.pic === null ? "" : a.pic,
+          a.status === null ? "" : a.status, a.note === null ? "" : a.note
+        ]);
+      });
+
+      unduhCsv(baris, "seamolec-aktivitas.csv");
+    }
+
+    /** Unduh matriks sebagai berkas CSV dengan BOM agar Excel membaca UTF-8. */
+    function unduhCsv(baris, namaBerkas) {
+      var csv = "\ufeff" + baris.map(function (r) {
+        return r.map(function (v) {
+          return '"' + String(v === null || v === undefined ? "" : v).replace(/"/g, '""') + '"';
+        }).join(",");
+      }).join("\r\n");
+
+      var blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var tautan = document.createElement("a");
+      tautan.href = url;
+      tautan.download = namaBerkas;
+      document.body.appendChild(tautan);
+      tautan.click();
+      document.body.removeChild(tautan);
+      URL.revokeObjectURL(url);
+    }
+
+    /* -- Drawer detail ----------------------------------------- */
+    var fokusSebelumnya = null;
+
+    function bukaDrawer(id) {
+      var a = activities.filter(function (x) { return x.id === id; })[0];
+      if (!a) return;
+
+      idTerpilih = id;
+      fokusSebelumnya = document.activeElement;
+
+      var p = programmeDari(a.programme_id);
+
+      document.getElementById("drawer-kode").textContent =
+        "Aktivitas " + a.id + " · " + a.code + " · " + (p ? p.acronym : "");
+
+      document.getElementById("drawer-judul").textContent = a.title;
+
+      var isi = document.getElementById("drawer-isi");
+      isi.textContent = "";
+
+      // Wadah dua kolom: nama field di kiri, nilai di kanan.
+      var grid = el("div", "field-grid");
+
+      // Seluruh field aktivitas. `kosongTeks` menentukan frasa pengganti
+      // yang tepat untuk tiap field, bukan satu frasa generik.
+      [
+        ["Flagship", p ? p.acronym + " — " + p.full_name : "—", "Belum dipetakan"],
+        ["Program / Komponen", a.component, "Belum diisi"],
+        ["Kode", a.code, "Belum diisi"],
+        ["Pilar", a.pillar, "Belum diisi"],
+        ["Divisi Pelaksana", a.division, "Belum ditetapkan"],
+        ["PIC", a.pic, "Belum ditugaskan"],
+        ["Status", a.status, "Belum ada data"],
+        ["Catatan", a.note, "Belum ada catatan"],
+        ["Tanggal mulai", a.start_date, "Belum ditetapkan"],
+        ["Tenggat selesai", a.due_date, "Belum ditetapkan"]
+      ].forEach(function (pasangan) {
+        grid.appendChild(el("div", "field-nama", pasangan[0]));
+        if (pasangan[1] === null || pasangan[1] === undefined || pasangan[1] === "") {
+          grid.appendChild(el("div", "field-nilai kosong", pasangan[2]));
+        } else {
+          grid.appendChild(el("div", "field-nilai", pasangan[1]));
+        }
+      });
+      isi.appendChild(grid);
+
+      // Riwayat pembaruan
+      var bagianRiwayat = el("section", "drawer-bagian");
+      bagianRiwayat.appendChild(el("h3", "drawer-subjudul", "Riwayat pembaruan"));
+
+      var riwayat = progressUpdates.filter(function (u) { return u.activity_id === a.id; });
+
+      if (riwayat.length === 0) {
+        bagianRiwayat.appendChild(el("p", "tindak-teks",
+          "Belum ada pembaruan. Riwayat akan tercatat setiap kali status diubah dari tabel."));
+      } else {
+        var ol = el("ul", "riwayat-daftar");
+        riwayat.forEach(function (u) {
+          var li = el("li", "riwayat-item");
+          var atas = el("div", "riwayat-atas");
+
+          if (u.status_before === null) {
+            atas.appendChild(el("span", "td-kosong", "Belum diisi"));
+          } else {
+            atas.appendChild(buatPill(u.status_before));
+          }
+          atas.appendChild(el("span", "riwayat-panah", "\u2192"));
+          atas.appendChild(buatPill(u.status_after));
+          atas.appendChild(el("span", "riwayat-waktu", formatWaktu(u.timestamp) + " · " + u.author));
+          li.appendChild(atas);
+
+          if (u.comment) li.appendChild(el("p", "riwayat-komentar", u.comment));
+          ol.appendChild(li);
+        });
+        bagianRiwayat.appendChild(ol);
+      }
+      isi.appendChild(bagianRiwayat);
+
+      // Kendala
+      var bagianKendala = el("section", "drawer-bagian");
+      bagianKendala.appendChild(el("h3", "drawer-subjudul", "Kendala"));
+      bagianKendala.appendChild(
+        el("div", "kendala-kotak",
+          a.note || "Belum ada kendala yang dicatat. Kolom Catatan pada spreadsheet sumber masih kosong.")
+      );
+      isi.appendChild(bagianKendala);
+
+      // Tindak lanjut
+      var bagianTindak = el("section", "drawer-bagian");
+      bagianTindak.appendChild(el("h3", "drawer-subjudul", "Tindak lanjut"));
+      var kotakTindak = el("div", "tindak-baris");
+      kotakTindak.appendChild(el("span", "tindak-teks",
+        "Ubah status langsung dari tabel, atau catat tindak lanjut pada kolom Catatan."));
+      var tombolTutup = el("button", "tombol", "Tutup");
+      tombolTutup.type = "button";
+      tombolTutup.addEventListener("click", tutupDrawer);
+      kotakTindak.appendChild(tombolTutup);
+      bagianTindak.appendChild(kotakTindak);
+      isi.appendChild(bagianTindak);
+
+      // Tampilkan
+      document.getElementById("tirai").hidden = false;
+      document.getElementById("drawer").hidden = false;
+      // Paksa reflow agar transisi berjalan.
+      void document.getElementById("drawer").offsetWidth;
+      document.getElementById("tirai").setAttribute("data-buka", "");
+      document.getElementById("drawer").setAttribute("data-buka", "");
+
+      gambarTabel();
+      document.getElementById("drawer-tutup").focus();
+    }
+
+    function tutupDrawer() {
+      var drawer = document.getElementById("drawer");
+      var tirai = document.getElementById("tirai");
+      drawer.removeAttribute("data-buka");
+      tirai.removeAttribute("data-buka");
+      drawer.hidden = true;
+      tirai.hidden = true;
+      idTerpilih = null;
+      gambarTabel();
+      if (fokusSebelumnya && fokusSebelumnya.focus) fokusSebelumnya.focus();
+    }
+
+    function formatWaktu(iso) {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      var dua = function (n) { return n < 10 ? "0" + n : String(n); };
+      return dua(d.getDate()) + "/" + dua(d.getMonth() + 1) + "/" + d.getFullYear() +
+        " " + dua(d.getHours()) + ":" + dua(d.getMinutes());
+    }
+
+    /* ============================================================
+       HALAMAN PAPAN KPI
+       ============================================================ */
+
+    var KOLOM_KPI = [
+      { key: "category",   label: "Kategori",          kelas: "kk-kat",    sortable: true },
+      { key: "programme",  label: "Program / Kode",    kelas: "kk-prog",   sortable: true },
+      { key: "indicator",  label: "Rumusan Indikator", kelas: "kk-rumus",  sortable: true },
+      { key: "target",     label: "Target",            kelas: "kk-target", sortable: true, angka: true },
+      { key: "unit",       label: "Satuan",            kelas: "kk-satuan", sortable: true },
+      { key: "realisation",label: "Realisasi",         kelas: "kk-real",   sortable: true },
+      { key: "_capaian",   label: "Capaian",           kelas: "kk-capa",   sortable: true, angka: true, turunan: true },
+      { key: "_status",    label: "Status",            kelas: "kk-stat",   sortable: true, turunan: true }
+    ];
+
+    // Urutan siklus klik header: tanpa urutan -> naik -> turun -> tanpa urutan.
+    var urutanKpi = { kunci: null, arah: null };
+
+    /**
+     * Status KPI dari angka capaian. Perbandingan pada angka, bukan teks.
+     * Mengembalikan label status saja.
+     */
+    function statusKpi(capaian) {
+      if (capaian === null) return "Belum ada data";
+      if (capaian >= 1) return "Tercapai";
+      if (capaian >= 0.7) return "On track";
+      return "Perlu perhatian";
+    }
+
+    /**
+     * Nilai target apa adanya: 1500 -> "1.500", 0,2 -> "0,2", 1 -> "1".
+     * Sengaja TIDAK dikali 100, karena kolom ini menampilkan target,
+     * bukan capaian dalam persen.
+     */
+    function formatNilaiTarget(nilai) {
+      if (nilai === null || nilai === undefined) return "—";
+      if (!isFinite(nilai)) return "—";
+      // Tampilkan desimal hanya bila memang ada.
+      var desimal = Math.abs(nilai % 1) > 0 ? 1 : 0;
+      return new Intl.NumberFormat("id-ID", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: desimal,
+      }).format(nilai);
+    }
+
+    /** Nilai yang dipakai untuk mengurutkan sebuah KPI pada kolom tertentu. */
+    function nilaiUrutKpi(kpi, kunci) {
+      if (kunci === "_capaian") {
+        var c = hitungCapaian(kpi.realisation, kpi.target);
+        return c === null ? null : c;
+      }
+      if (kunci === "_status") return statusKpi(hitungCapaian(kpi.realisation, kpi.target));
+      return kpi[kunci];
+    }
+
+    function kpiTersaring(kategori) {
+      var daftar = kpis.filter(function (k) { return k.category === kategori; });
+
+      if (urutanKpi.kunci) {
+        var balik = urutanKpi.arah === "turun" ? -1 : 1;
+        daftar.sort(function (a, b) {
+          var va = nilaiUrutKpi(a, urutanKpi.kunci);
+          var vb = nilaiUrutKpi(b, urutanKpi.kunci);
+          // Nilai kosong selalu di bawah, tidak peduli arah urutan.
+          if (va === null && vb === null) return 0;
+          if (va === null) return 1;
+          if (vb === null) return -1;
+          if (typeof va === "number" && typeof vb === "number") return (va - vb) * balik;
+          return String(va).localeCompare(String(vb), "id") * balik;
+        });
+      }
+
+      return daftar;
+    }
+
+    /** Nilai kolom Capaian: satu desimal, atau tanda pisah bila data kosong. */
+    function selCapaian(kpi) {
+      var capaian = hitungCapaian(kpi.realisation, kpi.target);
+
+      if (capaian === null) {
+        var kosong = el("span", "tanda-kosong", "—");
+        kosong.setAttribute("aria-label", "Belum ada capaian");
+        return kosong;
+      }
+
+      // Persentase = rasio x 100, dibandingkan pada angkanya.
+      return el("span", "td-capaian", formatPersen(capaian * 100));
+    }
+
+    function gambarKepalaKpi() {
+      ["strategi", "smart"].forEach(function (nama) {
+        var tr = document.getElementById("kpi-kepala-" + nama);
+        tr.textContent = "";
+
+        KOLOM_KPI.forEach(function (kolom) {
+          var th = el("th", kolom.kelas);
+          th.setAttribute("scope", "col");
+
+          if (!kolom.sortable) {
+            th.appendChild(el("span", "urut-tombol", kolom.label));
+            tr.appendChild(th);
+            return;
+          }
+
+          var tombol = el("button", "urut-tombol");
+          tombol.type = "button";
+
+          var aktual = urutanKpi.kunci === kolom.key ? urutanKpi.arah : null;
+          tombol.setAttribute("aria-sort", aktual === "naik" ? "ascending" : (aktual === "turun" ? "descending" : "none"));
+
+          tombol.appendChild(document.createTextNode(kolom.label));
+          var ikon = el("span", "urut-ikon");
+          ikon.setAttribute("aria-hidden", "true");
+          ikon.textContent = aktual === "naik" ? "\u25B2" : (aktual === "turun" ? "\u25BC" : "\u21C5");
+          tombol.appendChild(ikon);
+
+          var keterangan = aktual === "naik"
+            ? "Terurut menaik. Aktifkan untuk mengurutkan menurun."
+            : (aktual === "turun"
+              ? "Terurut menurun. Aktifkan untuk menghapus urutan."
+              : "Belum terurut. Aktifkan untuk mengurutkan menaik.");
+          tombol.appendChild(el("span", "sr-only", keterangan));
+
+          tombol.addEventListener("click", function () {
+            if (urutanKpi.kunci !== kolom.key) {
+              urutanKpi.kunci = kolom.key;
+              urutanKpi.arah = "naik";
+            } else if (urutanKpi.arah === "naik") {
+              urutanKpi.arah = "turun";
+            } else {
+              urutanKpi.kunci = null;
+              urutanKpi.arah = null;
+            }
+            gambarKepalaKpi();
+            gambarTabelKpi();
+          });
+
+          th.appendChild(tombol);
+          tr.appendChild(th);
+        });
+      });
+    }
+
+    /** Kolom Realisasi: satu-satunya kolom yang dapat disunting. */
+    function selRealisasi(kpi) {
+      var td = el("td");
+
+      var bungkus = el("div", "realisasi-bungkus");
+
+      var input = el("input", "realisasi-input");
+      input.type = "text";
+      input.inputMode = "decimal";
+      input.value = kpi.realisation === null ? "" : String(kpi.realisation);
+      input.setAttribute("aria-label", "Realisasi untuk " + kpi.programme + ", satuan " + kpi.unit);
+      input.placeholder = "—";
+
+      var galat = el("span", "realisasi-galat sr-only");
+      galat.setAttribute("role", "alert");
+      input.setAttribute("aria-describedby", "realisasi-galat-" + kpi.id);
+      galat.id = "realisasi-galat-" + kpi.id;
+
+      // Satuan sudah punya kolom sendiri, jadi tidak diulang di sini.
+      bungkus.appendChild(input);
+
+      // Simpan saat pengguna meninggalkan medan atau menekan Enter.
+      input.addEventListener("change", function () {
+        simpanRealisasi(kpi, input, galat);
+      });
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          simpanRealisasi(kpi, input, galat);
+          input.blur();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          input.value = kpi.realisation === null ? "" : String(kpi.realisation);
+          tandaiGalat(input, galat, false);
+        }
+      });
+
+      td.appendChild(bungkus);
+      td.appendChild(galat);
+      return td;
+    }
+
+    function tandaiGalat(input, galat, ada) {
+      if (ada) {
+        input.setAttribute("aria-invalid", "true");
+        galat.textContent = "Nilai realisasi harus berupa angka.";
+      } else {
+        input.removeAttribute("aria-invalid");
+        galat.textContent = "";
+      }
+    }
+
+    function simpanRealisasi(kpi, input, galat) {
+      var teks = input.value.trim();
+
+      if (teks === "") {
+        kpi.realisation = null;
+        tandaiGalat(input, galat, false);
+      } else {
+        // Terima koma maupun titik sebagai pemisah desimal.
+        var angka = Number(teks.replace(",", "."));
+        if (!isFinite(angka)) {
+          tandaiGalat(input, galat, true);
+          return;
+        }
+        kpi.realisation = angka;
+        tandaiGalat(input, galat, false);
+      }
+
+      gambarTabelKpi();
+    }
+
+    function gambarTabelKpi() {
+      ["strategi", "smart"].forEach(function (nama) {
+        var kategori = nama === "strategi" ? "Strategi" : "SMART";
+        var tbody = document.getElementById("kpi-isi-" + nama);
+        tbody.textContent = "";
+
+        var barisKpi = kpiTersaring(kategori);
+
+        // Setiap kelompok bisa kosong bila pengguna menyaring, jadi
+        // masing-masing mendapat baris keterangan sendiri.
+        if (barisKpi.length === 0) {
+          var trKosong = el("tr", "baris-kosong");
+          var tdKosong = el("td");
+          tdKosong.colSpan = KOLOM_KPI.length;
+          tdKosong.appendChild(buatKosong({
+            baris: true,
+            judul: "Tidak ada indikator " + kategori.toLowerCase() + " yang cocok",
+            teks: "Ubah kata kunci pencarian atau kosongkan kotak cari untuk melihat seluruh indikator."
+          }));
+          trKosong.appendChild(tdKosong);
+          tbody.appendChild(trKosong);
+          return;
+        }
+
+        barisKpi.forEach(function (kpi) {
+          var tr = el("tr");
+
+          KOLOM_KPI.forEach(function (kolom) {
+            if (kolom.key === "realisation") {
+              tr.appendChild(selRealisasi(kpi));
+              return;
+            }
+
+            var td = el("td", kolom.kelas);
+
+            if (kolom.key === "_capaian") {
+              td.appendChild(selCapaian(kpi));
+            } else if (kolom.key === "_status") {
+              td.appendChild(buatPill(statusKpi(hitungCapaian(kpi.realisation, kpi.target))));
+            } else if (kolom.key === "target") {
+              td.classList.add("td-angka");
+              // Target ditampilkan apa adanya (bukan dikali 100), karena ini
+              // nilai target, bukan persentase capaian.
+              td.textContent = formatNilaiTarget(kpi.target);
+            } else if (kolom.key === "programme") {
+              var isi = el("div", "td-program");
+              isi.appendChild(el("span", "td-program-kode", kpi.programme));
+              td.appendChild(isi);
+            } else {
+              td.textContent = kpi[kolom.key];
+            }
+
+            tr.appendChild(td);
+          });
+
+          tbody.appendChild(tr);
+        });
+      });
+
+      gambarRingkasKpi();
+    }
+
+    function gambarRingkasKpi() {
+      var wadah = document.getElementById("kpi-ringkas");
+      if (!wadah) return;
+
+      var jumlah = { tercapai: 0, ontrack: 0, perhatian: 0, kosong: 0 };
+
+      kpis.forEach(function (kpi) {
+        var label = statusKpi(hitungCapaian(kpi.realisation, kpi.target));
+        if (label === "Tercapai") jumlah.tercapai++;
+        else if (label === "On track") jumlah.ontrack++;
+        else if (label === "Perlu perhatian") jumlah.perhatian++;
+        else jumlah.kosong++;
+      });
+
+      wadah.textContent = "";
+
+      var bagianAwal = [jumlah.tercapai, jumlah.ontrack, jumlah.perhatian].reduce(function (a, b) { return a + b; }, 0);
+
+      wadah.appendChild(document.createTextNode(
+        bagianAwal === 0
+          ? "10 indikator · seluruh realisasi masih kosong, belum ada capaian yang dapat dihitung."
+          : bagianAwal + " dari 10 indikator memiliki realisasi."
+      ));
+
+      if (bagianAwal > 0) {
+        wadah.appendChild(document.createTextNode(" "));
+        [
+          ["Tercapai", jumlah.tercapai],
+          ["On track", jumlah.ontrack],
+          ["Perlu perhatian", jumlah.perhatian]
+        ].forEach(function (pasangan) {
+          if (pasangan[1] === 0) return;
+          var p = buatPill(pasangan[0]);
+          p.appendChild(document.createTextNode(" " + pasangan[1]));
+          wadah.appendChild(p);
+        });
+      }
+
+      if (jumlah.kosong > 0) {
+        wadah.appendChild(document.createTextNode(" "));
+        var pk = buatPill("Belum ada data");
+        pk.appendChild(document.createTextNode(" " + jumlah.kosong));
+        wadah.appendChild(pk);
+      }
+    }
+
+    function eksporKpiCsv() {
+      var baris = [["Kategori", "Program / Kode", "Rumusan Indikator", "Target", "Satuan", "Realisasi", "Capaian", "Status"]];
+
+      kpis.forEach(function (kpi) {
+        var capaian = hitungCapaian(kpi.realisation, kpi.target);
+        baris.push([
+          kpi.category,
+          kpi.programme,
+          kpi.indicator,
+          formatNilaiTarget(kpi.target),
+          kpi.unit,
+          kpi.realisation === null ? "" : kpi.realisation,
+          capaian === null ? "—" : formatPersen(capaian * 100),
+          statusKpi(capaian)
+        ]);
+      });
+
+      unduhCsv(baris, "seamolec-kpi.csv");
+    }
+
+    /* ============================================================
+       HALAMAN TIMELINE MILESTONE
+       ============================================================ */
+
+    // 2025-2026 = periode berjalan, 2027-2029 = periode mendatang.
+    function periodeTonggak(tahun) {
+      return tahun <= 2026 ? "berjalan" : "mendatang";
+    }
+
+    function labelPeriode(periode) {
+      return periode === "berjalan" ? "Periode berjalan" : "Periode mendatang";
+    }
+
+    function gambarLinimasa() {
+      var wadah = document.getElementById("linimasa");
+      if (!wadah) return;
+      wadah.textContent = "";
+
+      if (milestones.length === 0) {
+        wadah.appendChild(buatKosong({
+          baris: true,
+          judul: "Belum ada milestone terdaftar",
+          teks: "Timeline menampilkan tonggak 2025–2029 dari Rencana Pembangunan Lima Tahun."
+        }));
+        return;
+      }
+
+      var tahunSekarang = new Date().getFullYear();
+
+      milestones.forEach(function (ms) {
+        var periode = periodeTonggak(ms.year);
+
+        var li = el("li", "tonggak");
+        li.setAttribute("data-periode", periode);
+
+        li.appendChild(el("span", "tonggak-titik"));
+
+        var kartu = el("article", "tonggak-kartu");
+
+        // Kepala: tahun + penanda periode + status pill
+        var kepala = el("header", "tonggak-kepala");
+
+        var tahun = el("h3", "tonggak-tahun", String(ms.year));
+        var statusLengkap = ms.status || "Belum ada data";
+        tahun.id = "tonggak-" + ms.year;
+        kepala.appendChild(tahun);
+
+        var tanda = el("span", "periode-tanda", labelPeriode(periode));
+        kepala.appendChild(tanda);
+
+        if (ms.year === tahunSekarang) {
+          kepala.appendChild(el("span", "periode-tanda", "Tahun ini"));
+        }
+
+        kepala.appendChild(buatPill(statusLengkap));
+        kartu.appendChild(kepala);
+
+        // Isi
+        var isi = el("div", "tonggak-isi");
+
+        var barisDesk = el("div", "tonggak-baris");
+        barisDesk.appendChild(el("span", "tonggak-label", "Deskripsi"));
+        var ul = el("ul", "tonggak-daftar");
+        ms.items.forEach(function (teks) {
+          ul.appendChild(el("li", null, teks));
+        });
+        barisDesk.appendChild(ul);
+        isi.appendChild(barisDesk);
+
+        var barisPic = el("div", "tonggak-baris");
+        barisPic.appendChild(el("span", "tonggak-label", "PIC"));
+        if (ms.pic) {
+          barisPic.appendChild(el("span", "tonggak-nilai", ms.pic));
+        } else {
+          barisPic.appendChild(el("span", "tonggak-nilai tanda-kosong", "Belum ditugaskan"));
+        }
+        isi.appendChild(barisPic);
+
+        var barisCat = el("div", "tonggak-baris");
+        barisCat.appendChild(el("span", "tonggak-label", "Catatan"));
+        if (ms.note) {
+          barisCat.appendChild(el("span", "tonggak-nilai", ms.note));
+        } else {
+          barisCat.appendChild(el("span", "tonggak-nilai tanda-kosong", "Belum diisi"));
+        }
+        isi.appendChild(barisCat);
+
+        kartu.appendChild(isi);
+        li.appendChild(kartu);
+        wadah.appendChild(li);
+      });
+    }
+
+    /* ============================================================
+       HALAMAN KERANGKA M&E
+       ============================================================ */
+
+    var KOLOM_ME = [
+      { label: "Komponen M&E",          kelas: "mk-komp" },
+      { label: "Metode Pengumpulan Data", kelas: "mk-metode" },
+      { label: "Penanggung Jawab",       kelas: "mk-pj" },
+      { label: "Frekuensi Review",       kelas: "mk-frek" },
+      { label: "Titik Keputusan / Pemanfaatan", kelas: "mk-titik" }
+    ];
+
+    function gambarTabelMe() {
+      var tr = document.getElementById("me-kepala");
+      tr.textContent = "";
+      KOLOM_ME.forEach(function (k) {
+        var th = el("th", k.kelas);
+        th.setAttribute("scope", "col");
+        th.textContent = k.label;
+        tr.appendChild(th);
+      });
+
+      var tbody = document.getElementById("me-isi");
+      tbody.textContent = "";
+
+      if (meComponents.length === 0) {
+        var trKosong = el("tr", "baris-kosong");
+        var tdKosong = el("td");
+        tdKosong.colSpan = KOLOM_ME.length;
+        tdKosong.appendChild(buatKosong({
+          baris: true,
+          judul: "Belum ada komponen M&E",
+          teks: "Kerangka pemantauan dan evaluasi dimuat dari dokumen M&E lima tahunan."
+        }));
+        trKosong.appendChild(tdKosong);
+        tbody.appendChild(trKosong);
+        return;
+      }
+
+      meComponents.forEach(function (m) {
+        var baris = el("tr");
+
+        // Komponen M&E
+        var tdK = el("td", "td-komponen");
+        tdK.textContent = m.component;
+        baris.appendChild(tdK);
+
+        // Metode — dipecah menjadi butir agar terbaca
+        var tdM = el("td");
+        var ul = el("ul", "daftar-butir");
+        m.methods.forEach(function (teks) {
+          ul.appendChild(el("li", null, teks));
+        });
+        tdM.appendChild(ul);
+        baris.appendChild(tdM);
+
+        // Penanggung jawab
+        var tdP = el("td");
+        tdP.appendChild(el("span", "pj-tanda", m.owner));
+        baris.appendChild(tdP);
+
+        // Frekuensi review
+        var tdF = el("td");
+        tdF.textContent = m.frequency;
+        baris.appendChild(tdF);
+
+        // Titik keputusan
+        var tdT = el("td");
+        tdT.textContent = m.decision_point;
+        baris.appendChild(tdT);
+
+        tbody.appendChild(baris);
+      });
+    }
+
+    /* ============================================================
+       HALAMAN PENDANAAN
+       ============================================================ */
+
+    var KOLOM_DANA = [
+      { key: "category",      label: "Kategori",         kelas: "dk-kat" },
+      { key: "item",          label: "Program / Aset",   kelas: "dk-item" },
+      { key: "strategy_code", label: "Kode Strategi",    kelas: "dk-kode" },
+      { key: "lead_division", label: "Lead Division",    kelas: "dk-div" },
+      { key: "source",        label: "Sumber Dana Utama", kelas: "dk-sumber" },
+      { key: "rationale",     label: "Rasional",         kelas: "dk-alasan" }
+    ];
+
+    /**
+     * Sumber dana sebuah baris. Sebuah baris bisa menyebut lebih dari satu
+     * sumber (mis. "Core Budget (pendirian unit) / External Grants"), jadi
+     * hasilnya berupa HIMPUNAN, bukan satu label tunggal.
+     */
+    function sumberDana(f) {
+      var s = (f.source || "").toLowerCase();
+      var hasil = [];
+      if (s.indexOf("external grants") !== -1) hasil.push("external");
+      if (s.indexOf("core budget") !== -1) hasil.push("core");
+      if (s.indexOf("fee-for-service") !== -1) hasil.push("fee");
+      if (s.indexOf("host ministry") !== -1) hasil.push("host");
+      if (s.indexOf("member states") !== -1) hasil.push("member");
+      return hasil;
+    }
+
+    function gambarTabelDana() {
+      ["program", "ti"].forEach(function (nama) {
+        var kategori = nama === "program" ? "Program" : "Infrastruktur TI";
+
+        var tr = document.getElementById("dana-kepala-" + nama);
+        tr.textContent = "";
+        KOLOM_DANA.forEach(function (k) {
+          var th = el("th", k.kelas);
+          th.setAttribute("scope", "col");
+          th.textContent = k.label;
+          tr.appendChild(th);
+        });
+
+        var tbody = document.getElementById("dana-isi-" + nama);
+        tbody.textContent = "";
+
+        var barisDana = fundings.filter(function (f) { return f.category === kategori; });
+
+        if (barisDana.length === 0) {
+          var trKosong = el("tr", "baris-kosong");
+          var tdKosong = el("td");
+          tdKosong.colSpan = KOLOM_DANA.length;
+          tdKosong.appendChild(buatKosong({
+            baris: true,
+            judul: "Belum ada baris " + kategori.toLowerCase(),
+            teks: "Rincian pendanaan dimuat dari lembar pendanaan Rencana Pembangunan Lima Tahun."
+          }));
+          trKosong.appendChild(tdKosong);
+          tbody.appendChild(trKosong);
+          return;
+        }
+
+        barisDana.forEach(function (f) {
+            var baris = el("tr");
+
+            KOLOM_DANA.forEach(function (k) {
+              var td = el("td", k.kelas);
+
+              if (k.key === "category") {
+                var tanda = el("span", "kat-tanda " + (f.category === "Program" ? "kat-program" : "kat-ti"));
+                tanda.textContent = f.category;
+                td.appendChild(tanda);
+              } else if (k.key === "item") {
+                td.classList.add("td-asal");
+                td.textContent = f.item;
+              } else {
+                td.textContent = f[k.key];
+              }
+
+              baris.appendChild(td);
+            });
+
+            tbody.appendChild(baris);
+          });
+      });
+    }
+
+    /**
+     * Ringkasan kecil: berapa program memakai External Grants versus Core Budget.
+     * Karena satu baris bisa menyebut beberapa sumber, kedua angka dihitung
+     * sebagai "program yang menyebut sumber itu" — sehingga jumlahnya bisa
+     * melebihi 9. Itu dinyatakan terang di keterangan, bukan disembunyikan.
+     */
+    function gambarRingkasDana() {
+      var wadah = document.getElementById("dana-ringkas");
+      if (!wadah) return;
+      wadah.textContent = "";
+
+      var program = fundings.filter(function (f) { return f.category === "Program"; });
+      var totalProgram = program.length;
+
+      var adaExternal = program.filter(function (f) {
+        return sumberDana(f).indexOf("external") !== -1;
+      }).length;
+      var adaCore = program.filter(function (f) {
+        return sumberDana(f).indexOf("core") !== -1;
+      }).length;
+      var hanyaCore = program.filter(function (f) {
+        var s = sumberDana(f);
+        return s.indexOf("core") !== -1 && s.indexOf("external") === -1;
+      }).length;
+      var kedua = program.filter(function (f) {
+        var s = sumberDana(f);
+        return s.indexOf("core") !== -1 && s.indexOf("external") !== -1;
+      }).length;
+
+      var ti = fundings.filter(function (f) { return f.category === "Infrastruktur TI"; }).length;
+
+      function kartu(label, angka, satuan, rinci, kelas) {
+        var k = el("div", "ringkas-kartu" + (kelas ? " " + kelas : ""));
+        k.appendChild(el("span", "ringkas-label", label));
+        var a = el("div", "ringkas-angka");
+        a.appendChild(document.createTextNode(String(angka)));
+        a.appendChild(el("span", "ringkas-satuan", satuan));
+        k.appendChild(a);
+        k.appendChild(el("p", "ringkas-rinci", rinci));
+        return k;
+      }
+
+      wadah.appendChild(kartu(
+        "Total program",
+        totalProgram,
+        "program",
+        "Sembilan flagship programme, satu baris masing-masing."
+      ));
+
+      wadah.appendChild(kartu(
+        "Menyebut External Grants",
+        adaExternal,
+        "program",
+        kedua > 0
+          ? "Termasuk " + kedua + " program yang menggabungkannya dengan Core Budget."
+          : "Program dengan sumber dana berupa hibah eksternal."
+      ));
+
+      wadah.appendChild(kartu(
+        "Menyebut Core Budget",
+        adaCore,
+        "program",
+        hanyaCore + " program bersumber Core Budget saja, " + kedua + " digabung dengan External Grants."
+      ));
+
+      var ket = el("p", "ringkas-rinci");
+      ket.id = "dana-ringkas-catatan";
+      ket.style.gridColumn = "1 / -1";
+      ket.textContent = "Karena satu program dapat menyebut lebih dari satu sumber dana, angka External Grants (" +
+        adaExternal + ") dan Core Budget (" + adaCore + ") tidak harus berjumlah " + totalProgram +
+        ". Di luar sembilan program tersebut terdapat " + ti + " aset Infrastruktur TI dengan sumber dana tersendiri.";
+      wadah.appendChild(ket);
+    }
+
+    /* ============================================================
+       NAVIGASI ANTAR LAYAR
+       ============================================================ */
+
+    var itemNav = Array.prototype.slice.call(document.querySelectorAll(".nav-item"));
+    var semuaLayar = Array.prototype.slice.call(document.querySelectorAll(".layar"));
+    var judulHeader = document.getElementById("header-judul");
+
+    function tampilkan(target) {
+      semuaLayar.forEach(function (layar) {
+        var aktif = layar.id === "layar-" + target;
+        if (aktif) {
+          layar.setAttribute("data-aktif", "");
+          layar.removeAttribute("hidden");
+        } else {
+          layar.removeAttribute("data-aktif");
+          layar.setAttribute("hidden", "");
+        }
+      });
+
+      itemNav.forEach(function (item) {
+        if (item.dataset.target === target) {
+          item.setAttribute("aria-current", "page");
+          judulHeader.textContent = item.textContent.trim();
+        } else {
+          item.removeAttribute("aria-current");
+        }
+      });
+
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, "", "#" + target);
+      }
+
+      document.title = judulHeader.textContent + " — SEAMOLEC Monitoring Program";
+    }
+
+    itemNav.forEach(function (item) {
+      item.addEventListener("click", function () {
+        tampilkan(item.dataset.target);
+      });
+    });
+
+    itemNav.forEach(function (item, i) {
+      item.addEventListener("keydown", function (e) {
+        var tujuan = null;
+        if (e.key === "ArrowDown") tujuan = itemNav[(i + 1) % itemNav.length];
+        else if (e.key === "ArrowUp") tujuan = itemNav[(i - 1 + itemNav.length) % itemNav.length];
+        else if (e.key === "Home") tujuan = itemNav[0];
+        else if (e.key === "End") tujuan = itemNav[itemNav.length - 1];
+        if (tujuan) {
+          e.preventDefault();
+          tujuan.focus();
+        }
+      });
+    });
+
+    /* ============================================================
+       INISIALISASI
+       ============================================================ */
+
+    /* Peta: wadah -> bentuk skeleton + jumlah baris. Dipakai sekali untuk
+       menampilkan keadaan memuat di setiap halaman sebelum data digambar,
+       sehingga tidak ada layar yang tampak kosong sesaat setelah dibuka. */
+    var denahMemuat = [
+      ["grid-smart",         skKartu,        5],
+      ["daftar-flagship",    skBarisDaftar,  9],
+      ["daftar-risiko",      skBarisDaftar,  4],
+      ["tabel-isi",          skBarisTabel,   12],
+      ["kpi-isi-strategi",   skBarisTabel,   5],
+      ["kpi-isi-smart",      skBarisTabel,   5],
+      ["linimasa",           skBarisDaftar,  5],
+      ["me-isi",             skBarisTabel,   5],
+      ["dana-isi-program",   skBarisTabel,   9],
+      ["dana-isi-ti",        skBarisTabel,   4],
+      ["dana-ringkas",       skKartu,        3]
+    ];
+
+    /* Penanda skeleton pada tabel perlu menyesuaikan diri: baris skeleton
+       dimasukkan ke dalam <tbody>, sedangkan kartu/daftar ke wadah biasa. */
+    function skeletonUntuk(id, bentuk, jumlah, teks) {
+      var wadah = document.getElementById(id);
+      if (!wadah) return;
+      if (wadah.tagName === "TBODY") {
+        wadah.textContent = "";
+        wadah.setAttribute("aria-busy", "true");
+        var status = el("p", "sr-only", teks || "Memuat data…");
+        status.setAttribute("role", "status");
+        status.setAttribute("aria-live", "polite");
+        /* Status untuk pembaca layar tidak boleh berada di dalam tabel —
+           ia dipindahkan ke induk tabel agar tetap dibacakan. */
+        var induk = wadah.closest(".tabel-bungkus") || wadah.parentNode;
+        induk.insertBefore(status, induk.firstChild);
+        for (var i = 0; i < jumlah; i++) {
+          var tr = el("tr", "baris-memuat");
+          var td = el("td");
+          td.colSpan = 12;
+          td.appendChild(bentuk());
+          tr.appendChild(td);
+          wadah.appendChild(tr);
+        }
+      } else {
+        tampilkanMemuat(wadah, bentuk, jumlah, teks);
+      }
+    }
+
+    function tampilkanSemuaSkeleton() {
+      denahMemuat.forEach(function (d) {
+        skeletonUntuk(d[0], d[1], d[2], "Memuat " + d[0].replace(/-/g, " ") + "…");
+      });
+    }
+
+    /* Semua pekerjaan berat penggambaran dijalankan setelah satu bingkai,
+       supaya browser sempat melukis skeleton terlebih dahulu. */
+    function gambarSemua() {
+      denahMemuat.forEach(function (d) {
+        var wadah = document.getElementById(d[0]);
+        if (wadah && wadah.tagName === "TBODY") {
+          wadah.removeAttribute("aria-busy");
+        } else if (wadah) {
+          selesaiMemuat(wadah);
+        }
+      });
+
+      // Papan atas Dashboard
+      gambarKartuSmart();
+      gambarProgresFlagship();
+      gambarRisiko();
+
+      // Halaman Aktivitas
+      isiPilihan();
+      gambarKepalaTabel();
+      gambarTabel();
+
+      // Halaman Papan KPI
+      gambarKepalaKpi();
+      gambarTabelKpi();
+      document.getElementById("tombol-ekspor-kpi").addEventListener("click", eksporKpiCsv);
+
+      // Halaman Timeline Milestone
+      gambarLinimasa();
+
+      // Halaman Kerangka M&E
+      gambarTabelMe();
+
+      // Halaman Pendanaan
+      gambarRingkasDana();
+      gambarTabelDana();
+    }
+
+    tampilkanSemuaSkeleton();
+    setelahMemuat(gambarSemua);
+
+    document.getElementById("drawer-tutup").addEventListener("click", tutupDrawer);
+    document.getElementById("tirai").addEventListener("click", tutupDrawer);
+
+    // Escape menutup menu status lebih dulu, lalu drawer.
+    document.addEventListener("keydown", function (e) {
+      if (e.key !== "Escape") return;
+      if (menuStatus) { tutupPemilihStatus(); if (pemicuStatus) pemicuStatus.focus(); return; }
+      if (!document.getElementById("drawer").hidden) tutupDrawer();
+    });
+
+    // Klik di luar menu menutupnya.
+    document.addEventListener("click", function (e) {
+      if (menuStatus && !menuStatus.contains(e.target)) tutupPemilihStatus();
+    });
+
+    // Perbaiki posisi menu saat halaman digulir atau ukuran berubah.
+    window.addEventListener("scroll", tutupPemilihStatus, true);
+    window.addEventListener("resize", tutupPemilihStatus);
+
+    /* -- Segarkan Dashboard setelah status berubah -------------- */
+    function segarkanDashboard() {
+      var grid = document.getElementById("grid-smart");
+      if (grid) { grid.textContent = ""; gambarKartuSmart(); }
+      var fl = document.getElementById("daftar-flagship");
+      if (fl) { fl.textContent = ""; gambarProgresFlagship(); }
+      var rk = document.getElementById("daftar-risiko");
+      if (rk) { rk.textContent = ""; gambarRisiko(); }
+    }
+
+    var awal = (window.location.hash || "").replace("#", "");
+    if (awal && document.getElementById("layar-" + awal)) {
+      tampilkan(awal);
+    }
+  })();
+</script>
+
+</body>
+</html>
