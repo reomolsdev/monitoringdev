@@ -39,7 +39,7 @@
   function codes(flagship) { return [...new Set(catalog.filter(a => !flagship || a.flagship === flagship).map(a => a.kode))].sort(); }
   function filterCodes() { options($('lap-kode'), codes($('lap-flagship').value), 'Semua kode', $('lap-kode').value); }
   filterCodes();
-  let docs = [], page = 1, editing = null, deleting = null, storageError = '';
+  let docs = [], page = 1, editing = null, deleting = null, selectedId = null, storageError = '';
   try {
     const saved = JSON.parse(localStorage.getItem(key) || '[]');
     if (!Array.isArray(saved)) throw new Error('Invalid data');
@@ -93,11 +93,11 @@
       const flagship = node('td'); flagship.append(node('span', d.flagship || 'Lintas flagship', 'td-flag'), node('span', d.strategi ? 'Strategi '+d.strategi : 'Strategi umum', 'laporan-document-sub'), node('span', d.kode ? 'Aktivitas '+d.kode : 'Aktivitas umum', 'laporan-document-sub')); tr.append(flagship);
       tr.append(node('td', d.divisi), node('td', d.tahun + ' · ' + d.periode), node('td', d.jenis));
       const preview = node('td'), button = node('button', 'Preview', 'tombol laporan-preview-button'); button.type = 'button'; button.setAttribute('aria-label','Preview ' + d.judul); button.addEventListener('click', () => showPreview(d)); preview.append(button); tr.append(preview);
-      const actions = node('td'), holder = node('div', undefined, 'laporan-actions'); holder.append(action('Update ' + d.judul, 'update', () => openEditor(d)), action('Hapus ' + d.judul, 'delete', () => { deleting = d.id; $('lap-delete-nama').textContent = d.judul; $('lap-delete').showModal(); })); actions.append(holder); tr.append(actions);
-      [...tr.cells].forEach((cell, i) => cell.dataset.label = ['Dokumen / tautan','Flagship / kode','Divisi','Periode','Jenis','Preview','Aksi'][i]);
+      const holder = node('div', undefined, 'laporan-actions'); holder.append(button, action('Update ' + d.judul, 'update', () => openEditor(d)), action('Hapus ' + d.judul, 'delete', () => { deleting = d.id; $('lap-delete-nama').textContent = d.judul; $('lap-delete').showModal(); })); preview.replaceChildren(holder);
+      [...tr.cells].forEach((cell, i) => cell.dataset.label = ['Dokumen / tautan','Flagship / kode','Divisi','Periode','Jenis','Aksi'][i]);
       body.append(tr);
     });
-    $('lap-hitung').textContent = `Menampilkan ${matches.length} dari ${docs.length} dokumen`;
+    $('lap-hitung').textContent = `${matches.length} dokumen ditemukan`;
     $('lap-kosong').hidden = matches.length > 0;
     $('lap-kosong-judul').textContent = docs.length ? 'Tidak ada dokumen yang cocok' : 'Belum ada dokumen';
     $('lap-kosong-teks').textContent = docs.length ? 'Ubah pencarian atau reset filter untuk melihat dokumen lainnya.' : 'Upload dokumen di Drive, Docs, atau Spreadsheet, lalu tambahkan tautannya di sini.';
@@ -107,7 +107,13 @@
     $('lap-halaman').textContent = `${page} / ${totalPages}`;
     $('lap-sebelum').disabled = page === 1; $('lap-sesudah').disabled = page === totalPages;
     $('lap-ekspor').disabled = !matches.length;
+    const visible = matches.slice((page-1)*10,page*10);
+    const selected = visible.find(d => d.id === selectedId) || visible[0];
+    if (selected) showPreview(selected, false);
+    else { selectedId = null; $('lap-preview-area').replaceChildren(node('p', 'Tidak ada dokumen untuk ditampilkan.', 'laporan-catatan')); $('lap-preview-detail').replaceChildren(); $('lap-preview-link').hidden = true; $('lap-preview-meta').textContent = ''; $('lap-preview-info').textContent = ''; }
+    screen.querySelectorAll('[data-period]').forEach(b => { const active = b.dataset.period === $('lap-periode').value; b.classList.toggle('is-active', active); b.setAttribute('aria-pressed', String(active)); });
   }
+  screen.querySelectorAll('[data-period]').forEach(b => b.addEventListener('click', () => { $('lap-periode').value = b.dataset.period; page = 1; render(); }));
   ['flagship','strategi','kode','divisi','tahun','periode','jenis'].forEach(k => $('lap-'+k).addEventListener('change', () => { if (k === 'flagship') filterCodes(); page = 1; render(); }));
   $('lap-cari').addEventListener('input', () => { page = 1; render(); });
   $('lap-reset').addEventListener('click', () => { ['flagship','strategi','kode','divisi','tahun','periode','jenis','cari'].forEach(k => $('lap-'+k).value=''); filterCodes(); page=1; render(); });
@@ -181,7 +187,7 @@
   $('lap-delete-confirm').addEventListener('click',()=>{ if (persist(docs.filter(d=>d.id!==deleting))) { $('lap-delete').close(); render(); $('lap-notice').textContent='Tautan dokumen dihapus dari daftar.'; } });
   screen.querySelectorAll('[data-close]').forEach(button=>button.addEventListener('click',()=>$(button.dataset.close).close()));
   screen.querySelectorAll('dialog').forEach(dialog=>dialog.addEventListener('click',event=>{ const r=dialog.getBoundingClientRect(); if(event.target===dialog && (event.clientX<r.left || event.clientX>r.right || event.clientY<r.top || event.clientY>r.bottom))dialog.close(); }));
-  $('lap-preview').addEventListener('close',()=>$('lap-preview-area').replaceChildren());
+  $('lap-preview-close').addEventListener('click', () => { $('lap-preview').hidden = true; selectedId = null; screen.querySelectorAll('[data-document-id]').forEach(row => row.classList.remove('is-selected')); });
   function googlePreview(url) {
     const u = new URL(url);
     if (u.protocol !== 'https:') return '';
@@ -196,8 +202,12 @@
   function cover(d) {
     const card=node('div',undefined,'laporan-cover'); card.append(node('small','SEAMOLEC · FYDP 2025–2029'),node('small',d.jenis),node('h3',d.judul),node('p',`${d.flagship || 'Lintas flagship'} · ${d.strategi || 'Strategi umum'} · ${d.kode || 'Umum'}\n${d.tahun} · ${d.periode}`)); return card;
   }
-  function showPreview(d) {
-    $('lap-preview-judul').textContent=d.judul;
+  function showPreview(d, live = true) {
+    selectedId = d.id;
+    $('lap-preview').hidden = false;
+    $('lap-preview-link').hidden = false;
+    screen.querySelectorAll('[data-document-id]').forEach(row => row.classList.toggle('is-selected', row.dataset.documentId === d.id));
+    $('lap-preview-judul').textContent='Preview dokumen';
     $('lap-preview-meta').textContent=`${d.flagship || 'Lintas flagship'} · ${d.strategi || 'Strategi umum'} · ${d.kode || 'Umum'} · ${d.tahun} · ${d.periode}`;
     $('lap-preview-link').href=safeURL(d.url);
     const area=$('lap-preview-area'); area.replaceChildren();
@@ -206,13 +216,14 @@
       const img=node('img',undefined,'laporan-cover-image'); img.alt='Cover '+d.judul; img.referrerPolicy='no-referrer'; img.src=safeURL(d.cover);
       img.addEventListener('error',()=>{area.replaceChildren(cover(d));$('lap-preview-info').textContent='Gambar cover tidak dapat dimuat. Ditampilkan cover ringkasan dari metadata dokumen.';});
       area.append(img); $('lap-preview-info').textContent='Cover dari tautan gambar yang Anda tambahkan.';
-    } else if (preview) {
+    } else if (preview && live) {
       const iframe=node('iframe',undefined,'laporan-preview-frame'); iframe.title='Preview '+d.judul; iframe.referrerPolicy='no-referrer'; iframe.setAttribute('sandbox','allow-scripts allow-same-origin allow-popups'); iframe.src=preview; area.append(iframe);
       $('lap-preview-info').textContent='Preview berasal dari Google. Jika kosong atau meminta login, periksa izin berbagi atau buka dokumen asli.';
     } else {
       area.append(cover(d)); $('lap-preview-info').textContent='Cover ringkasan dari judul dan metadata; bukan halaman asli dokumen. Tambahkan tautan gambar cover untuk menampilkan cover asli.';
     }
-    $('lap-preview').showModal();
+    const detail = $('lap-preview-detail'); detail.replaceChildren();
+    [['Judul', d.judul], ['Flagship', d.flagship || 'Lintas flagship'], ['Strategi / aktivitas', `${d.strategi || 'Umum'} / ${d.kode || 'Umum'}`], ['Divisi', d.divisi], ['Periode', `${d.tahun} · ${d.periode}`], ['Jenis dokumen', d.jenis]].forEach(([label, value]) => detail.append(node('dt', label), node('dd', value)));
   }
   $('lap-ekspor').addEventListener('click',()=>{
     const rows=[['Judul','Tautan','Flagship','Kode strategi','Kode aktivitas','Aktivitas','Divisi','Tahun','Periode','Jenis dokumen','Keterangan'],...filtered().map(d=>[d.judul,d.url,d.flagship||'Lintas flagship',d.strategi||'Umum',d.kode||'Umum',d.aktivitasJudul,d.divisi,d.tahun,d.periode,d.jenis,d.catatan])];

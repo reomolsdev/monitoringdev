@@ -84,3 +84,79 @@
   body:has(#layar-laporan[data-aktif]) .header-kanan { min-width: 0; }
   body:has(#layar-laporan[data-aktif]) .peran-pilih { max-width: 148px; }
 }
+/* Layout laporan: daftar dan preview berdampingan. */
+#layar-laporan .laporan-heading { display:flex; justify-content:space-between; align-items:center; gap:20px; }
+#layar-laporan .laporan-heading .filter-aksi { display:flex; gap:10px; }
+#layar-laporan .laporan-workspace { display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:18px; align-items:start; }
+#layar-laporan .laporan-list-pane { min-width:0; }
+#layar-laporan .laporan-filter .filterbar-baris:first-child,
+#layar-laporan .laporan-filter > .filterbar-baris:nth-child(2) { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; }
+#layar-laporan .laporan-period-row { display:flex; flex-wrap:wrap; gap:12px; align-items:end; padding-bottom:16px; margin-bottom:16px; border-bottom:1px solid var(--garis); }
+#layar-laporan .laporan-period-row .filter-medan { flex:1; min-width:130px; }
+#layar-laporan .laporan-quarter-tabs { display:flex; gap:0; }
+#layar-laporan .laporan-quarter-tabs .tombol { border-radius:0; padding:0 12px; }
+#layar-laporan .laporan-quarter-tabs .tombol:first-child { border-radius:6px 0 0 6px; }
+#layar-laporan .laporan-quarter-tabs .tombol:last-child { border-radius:0 6px 6px 0; }
+#layar-laporan .laporan-quarter-tabs .is-active { background:var(--biru); color:white; border-color:var(--biru); }
+#layar-laporan .laporan-cari-baris { margin-top:16px; }
+#layar-laporan .laporan-tabel { font-size:12px; }
+#layar-laporan .laporan-tabel th:nth-child(1) { width:30%; }
+#layar-laporan .laporan-tabel th:nth-child(2) { width:14%; }
+#layar-laporan .laporan-tabel th:nth-child(3) { width:9%; }
+#layar-laporan .laporan-tabel th:nth-child(4) { width:11%; }
+#layar-laporan .laporan-tabel th:nth-child(5) { width:14%; }
+#layar-laporan .laporan-tabel th:nth-child(6) { width:22%; }
+#layar-laporan .laporan-tabel td { padding:14px 10px; }
+#layar-laporan .laporan-tabel tr.is-selected { background:var(--biru-lembut); }
+#layar-laporan .laporan-document-title { font-weight:600; }
+#layar-laporan .laporan-document-sub { font-size:11px; }
+#layar-laporan .laporan-actions { gap:4px; align-items:center; }
+#layar-laporan .laporan-preview-button { height:30px; }
+#layar-laporan .laporan-side-preview { background:var(--putih); border:1px solid var(--garis); border-radius:var(--r-besar); padding:18px; min-width:0; }
+#layar-laporan .laporan-panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; }
+#layar-laporan .laporan-panel-head h3 { font-size:16px; font-weight:600; }
+#layar-laporan #lap-preview-meta { margin-bottom:16px; }
+#layar-laporan .laporan-side-preview .laporan-cover { margin:0 0 18px; min-height:330px; padding:24px; border-top:5px solid var(--biru); background:white; gap:18px; }
+#layar-laporan .laporan-side-preview .laporan-cover h3 { font-size:23px; line-height:1.4; }
+#layar-laporan .laporan-side-preview .laporan-preview-frame { height:390px; margin-bottom:18px; }
+#layar-laporan .laporan-preview-detail { display:grid; grid-template-columns:90px minmax(0,1fr); gap:12px 10px; font-size:12px; margin:18px 0; }
+#layar-laporan .laporan-preview-detail dt { color:var(--teks-redup); }
+#layar-laporan .laporan-preview-detail dd { margin:0; overflow-wrap:anywhere; }
+#layar-laporan #lap-preview-link { display:flex; justify-content:center; width:100%; margin-top:18px; text-decoration:none; }
+#layar-laporan .laporan-workspace:has(.laporan-side-preview[hidden]) { grid-template-columns:minmax(0,1fr); }
+@media (max-width:1200px) {
+ #layar-laporan .laporan-workspace { grid-template-columns:minmax(0,1fr) 280px; }
+ #layar-laporan .laporan-filter > .filterbar-baris:nth-child(2) { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media (max-width:1000px) {
+ #layar-laporan .laporan-workspace { grid-template-columns:minmax(0,1fr); }
+ #layar-laporan .laporan-side-preview { max-width:100%; }
+ #layar-laporan .laporan-side-preview .laporan-cover { max-width:360px; margin:0 auto; }
+}
+@media (max-width:767px) {
+ #layar-laporan .laporan-heading { align-items:flex-start; flex-direction:column; }
+ #layar-laporan .laporan-filter > .filterbar-baris:nth-child(2) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ #layar-laporan .laporan-quarter-tabs { flex-wrap:wrap; }
+ #layar-laporan .laporan-tabel td { padding:0; }
+}
+/* Filter ringkas sesuai opsi ketiga; pencarian berada di luar card. */
+#layar-laporan .laporan-period-row { justify-content:flex-start; align-items:end; border:0; padding:0; margin:0 0 20px; gap:28px; }
+#layar-laporan .laporan-quarter-field { display:grid; gap:8px; }
+#layar-laporan .laporan-period-row .filter-medan { flex:none; width:150px; min-width:0; }
+#layar-laporan .laporan-quarter-tabs .tombol { min-width:48px; padding:0 14px; }
+#layar-laporan .laporan-filter > .laporan-secondary-filters { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; }
+#layar-laporan .laporan-filter .filter-label { text-transform:none; font-size:12px; letter-spacing:0; color:var(--teks); }
+#layar-laporan .laporan-filter { margin-bottom:0; }
+#layar-laporan .laporan-search-toolbar { display:flex; justify-content:space-between; align-items:center; gap:16px; margin:24px 0 18px; }
+#layar-laporan .laporan-search-input { position:relative; min-width:0; flex:1; max-width:450px; }
+#layar-laporan .laporan-search-input svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--teks-redup); pointer-events:none; }
+#layar-laporan .laporan-search-input input { width:100%; min-width:0; padding-left:38px; }
+#layar-laporan .laporan-search-status { display:flex; gap:12px; align-items:center; font-size:12px; }
+#layar-laporan .laporan-search-status p { margin:0; white-space:nowrap; }
+#layar-laporan #lap-reset { padding:0 8px; font-size:11px; }
+@media (max-width:767px) {
+ #layar-laporan .laporan-filter > .laporan-secondary-filters { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ #layar-laporan .laporan-search-toolbar { flex-wrap:wrap; }
+ #layar-laporan .laporan-search-input { flex-basis:100%; max-width:none; }
+ #layar-laporan .laporan-period-row { gap:16px; }
+}
