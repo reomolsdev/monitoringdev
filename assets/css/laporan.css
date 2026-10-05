@@ -26,6 +26,8 @@
 #layar-laporan .laporan-icon { display: grid; place-items: center; flex: none; width: 30px; height: 30px; padding: 0; border: var(--garis-tipis) solid var(--garis); border-radius: var(--r-kecil); background: var(--putih); color: var(--teks-redup); cursor: pointer; font: inherit; font-size: 22px; }
 #layar-laporan .laporan-icon:hover { border-color: var(--biru); color: var(--biru); background: var(--biru-lembut); }
 #layar-laporan .laporan-icon-delete:hover { color: var(--st-merah-teks); background: var(--st-merah-bg); border-color: var(--st-merah-teks); }
+#layar-laporan .laporan-icon-delete { color:#c53030; border-color:#f1c4c4; }
+#layar-laporan #lap-delete-confirm { color:white; background:#c53030; border-color:#c53030; }
 #layar-laporan .laporan-kosong { display: grid; justify-items: center; gap: var(--s-3); text-align: center; padding: 64px var(--s-5); }
 #layar-laporan .laporan-kosong h3 { font-size: 16px; }
 #layar-laporan .laporan-kosong p { color: var(--teks-redup); max-width: 52ch; }

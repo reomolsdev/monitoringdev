@@ -1917,13 +1917,13 @@
           </a>
         </li>
         <li>
-          <a class="nav-item" href="aktivitas.html" style="text-decoration: none;">
+          <a class="nav-item" href="BOD/aktivitas.html" style="text-decoration: none;">
             <svg class="nav-ikon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"></path></svg>
             Aktivitas
           </a>
         </li>
         <li>
-          <a class="nav-item" href="kpi.html" style="text-decoration: none;">
+          <a class="nav-item" href="BOD/kpi.html" style="text-decoration: none;">
             <svg class="nav-ikon" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 13.5h12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"></path><rect x="3" y="8" width="2.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.2"></rect><rect x="6.75" y="5" width="2.5" height="8.5" rx="1" stroke="currentColor" stroke-width="1.2"></rect><rect x="10.5" y="2.5" width="2.5" height="11" rx="1" stroke="currentColor" stroke-width="1.2"></rect></svg>
             Papan KPI
           </a>
@@ -1976,12 +1976,7 @@
         <span class="peran-badge">Mock</span>
         <div class="peran">
           <label class="peran-label" for="pilih-peran">Lihat sebagai</label>
-          <select class="peran-pilih" id="pilih-peran" aria-describedby="peran-catatan">
-            <option value="manajer" selected="">Manajer Program</option>
-            <option value="pic">PIC Divisi</option>
-            <option value="me">M&amp;E Officer</option>
-            <option value="pimpinan">Pimpinan / Governing Board</option>
-          </select>
+          <select class="peran-pilih" id="pilih-peran" aria-describedby="peran-catatan"><option value="bod" selected>BOD</option><option value="manajer">Manajer Program</option><option value="staf">Staf</option><option value="pic">PIC (Penanggung jawab)</option></select>
         </div>
         <span class="sr-only" id="peran-catatan">Pemilih peran bersifat sementara dan belum mengubah tampilan.</span>
       </div>
@@ -2113,4 +2108,5 @@
 
 
 
+<script src="assets/js/role-routing.js"></script>
 </body></html>

@@ -100,8 +100,8 @@
     $('lap-hitung').textContent = `${matches.length} dokumen ditemukan`;
     $('lap-kosong').hidden = matches.length > 0;
     $('lap-kosong-judul').textContent = docs.length ? 'Tidak ada dokumen yang cocok' : 'Belum ada dokumen';
-    $('lap-kosong-teks').textContent = docs.length ? 'Ubah pencarian atau reset filter untuk melihat dokumen lainnya.' : 'Upload dokumen di Drive, Docs, atau Spreadsheet, lalu tambahkan tautannya di sini.';
-    $('lap-upload-kosong').hidden = docs.length > 0;
+    $('lap-kosong-teks').textContent = docs.length ? 'Ubah pencarian atau reset filter untuk melihat dokumen lainnya.' : 'Dokumen ditambahkan melalui halaman Aktivitas.';
+
     $('lap-pagination').hidden = !matches.length;
     $('lap-rentang').textContent = `${(page-1)*10+1}–${Math.min(page*10,matches.length)} dari ${matches.length} dokumen`;
     $('lap-halaman').textContent = `${page} / ${totalPages}`;
@@ -150,7 +150,7 @@
     }
     $('lap-editor').showModal();
   }
-  $('lap-upload').addEventListener('click',()=>openEditor()); $('lap-upload-kosong').addEventListener('click',()=>openEditor());
+
   $('doc-flagship').addEventListener('change',()=>{ editorCodes(); editorStrategy($('doc-strategi').value); });
   $('doc-kode').addEventListener('change',()=>editorActivities());
   $('doc-jenis').addEventListener('change',()=>{

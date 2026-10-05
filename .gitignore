@@ -1,2 +1,5 @@
 # Temporary working files and publishing checkouts
 /tmp/
+
+# Browser diagnostic output
+/debug.log

@@ -1,0 +1,91 @@
+body.role-pages [hidden] { display:none !important; }
+.role-toolbar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.role-note { color:var(--teks-redup); font-size:12px; margin:12px 0; }
+.role-link { background:none; border:0; color:var(--biru); cursor:pointer; font:inherit; font-size:12px; padding:3px 0; text-align:left; }
+.role-row-tools { display:flex; flex-wrap:wrap; gap:8px; margin-top:5px; }
+
+.role-pages .pill-titik { background:currentColor; }
+.role-pages .realisasi-input:disabled { border-color:transparent; background:transparent; opacity:1; color:var(--teks); }
+.role-pages .role-status { font-size:11px; color:var(--teks-redup); display:block; margin-top:5px; }
+.role-pages .role-subtasks td { padding:12px 20px 16px 26%; background:#fbfcfe; border-bottom:1px solid var(--garis); }
+.role-subtask-line { display:grid; grid-template-columns:minmax(0,1fr) 140px 120px 130px; gap:12px; padding:9px 0; border-top:1px solid var(--garis); font-size:12px; }
+.role-subtask-line:first-child { border-top:0; }
+.role-subtask-line span { overflow-wrap:anywhere; }
+.role-dialog { width:min(540px,calc(100vw - 32px)); max-height:calc(100dvh - 40px); margin:auto; padding:0; border:1px solid var(--garis); border-radius:var(--r-besar); background:var(--putih); color:var(--teks); overflow:auto; box-shadow:0 16px 60px #1c2a3620; }
+.role-dialog::backdrop { background:rgb(35 48 64 / .35); }
+.role-dialog-head { display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid var(--garis); gap:16px; }
+.role-dialog-head h2 { font-size:18px; font-weight:500; }
+.role-close { border:0; background:none; font-size:24px; color:var(--teks-redup); cursor:pointer; }
+.role-dialog-body { display:grid; gap:16px; padding:24px; }
+.role-field { display:grid; gap:7px; font-size:12px; min-width:0; }
+.role-field :is(input,select,textarea) { width:100%; min-width:0; border:1px solid var(--garis-kuat); border-radius:var(--r-kecil); padding:9px 12px; background:white; color:var(--teks); font:inherit; }
+.role-field textarea { min-height:80px; resize:vertical; }
+.role-field :disabled { background:#f1f4f7; color:var(--teks-redup); }
+.role-dialog-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:8px; border-top:1px solid var(--garis); padding-top:16px; }
+.role-error { color:#a83232; font-size:12px; }
+.role-pages .tombol:disabled { opacity:.45; cursor:default; }
+.role-document { border:1px solid var(--garis); padding:14px; border-radius:6px; display:grid; gap:8px; font-size:12px; }
+.role-document a { color:var(--biru); overflow-wrap:anywhere; }
+.role-reader { min-height:200px; border:1px solid var(--garis); padding:24px; background:#fafbfd; display:grid; align-content:start; gap:16px; }
+.role-reader h3 { font-size:17px; }
+.role-pages #tabel-isi>tr[hidden] { display:none!important; }
+.role-pages #tabel-isi>tr { display:table-row!important; }
+.role-pages .filter-aksi { flex-wrap:wrap; }
+@media(max-width:767px) {
+ .role-subtask-line { grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+ .role-pages .role-subtasks td { padding:14px; }
+ .role-dialog-body { padding:18px; }
+ .role-pages .header { height:auto; min-height:var(--tinggi-header); flex-wrap:wrap; gap:10px; padding-top:12px; padding-bottom:12px; }
+}
+@media(max-width:767px) {
+ .role-pages .nav, .role-pages .utama, .role-pages .isi { min-width:0; }
+ .role-pages .nav { overflow:hidden; }
+ .role-pages .header-kanan { min-width:0; flex-wrap:wrap; }
+ .role-pages .peran-pilih { max-width:200px; }
+ .role-pages .tabel-bungkus { max-width:100%; overflow-x:auto; }
+ .role-pages .filterbar-baris { flex-wrap:wrap; }
+ .role-pages .filter-medan { min-width:0; max-width:100%; }
+ .role-pages .kpi-kaki { flex-wrap:wrap; }
+}
+
+.role-pages #kpi-ringkas { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
+.role-pages .realisasi-input[readonly] { cursor:default; }
+.role-pages .td-kosong .role-link { display:block; }
+.role-subtask-toggle { display:inline-flex; align-items:center; gap:7px; }
+.role-subtask-arrow { display:inline-block; width:10px; height:10px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(45deg); font-size:0; margin:-5px 4px 0 2px; flex-shrink:0; }
+.role-subtask-toggle[aria-expanded="true"] .role-subtask-arrow { transform:rotate(225deg); margin-top:5px; }
+.role-icon { display:inline-flex; position:relative; align-items:center; justify-content:center; width:34px; height:34px; padding:7px; border:1px solid var(--garis); border-radius:6px; background:white; color:var(--biru); cursor:pointer; }
+.role-icon svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+.role-actions-cell { white-space:nowrap; min-width:92px; }
+.role-actions-cell .role-icon + .role-icon { margin-left:6px; }
+.role-actions-group { display:flex; align-items:center; flex-wrap:nowrap; gap:6px; }
+.role-actions-group .role-icon { flex-shrink:0; margin:0 !important; }
+.role-pages .role-danger { color:#c53030; border-color:#f1c4c4; }
+.role-pages .role-danger-fill { background:#c53030; border-color:#c53030; color:white; }
+.role-inline-status { display:inline-flex; align-items:center; position:relative; gap:6px; max-width:100%; }
+.role-status-select { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+.role-inline-status:focus-within { outline:2px solid var(--biru); outline-offset:3px; border-radius:6px; }
+.role-status-chevron { display:block; width:9px; height:9px; margin:0 3px 5px; border-right:2px solid var(--teks-redup); border-bottom:2px solid var(--teks-redup); transform:rotate(45deg); font-size:0; line-height:0; flex-shrink:0; }
+.role-comment-preview { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-style:normal; font-size:11px; }
+.role-approval-list { display:grid; gap:8px; }
+.role-approval-item { background:white; color:var(--teks); width:100%; text-align:left; cursor:pointer; }
+.role-status-button { display:inline-flex; align-items:center; gap:4px; background:transparent; border:0; padding:0; cursor:pointer; color:var(--teks-redup); }
+.role-inbox-count { position:absolute; right:-7px; top:-7px; min-width:18px; height:18px; padding:2px 4px; border-radius:9px; background:var(--biru); color:white; font-size:10px; }
+.role-activity-results { max-height:220px; overflow:auto; border:1px solid var(--garis); border-radius:6px; }
+.role-activity-results button { display:block; width:100%; border:0; border-bottom:1px solid var(--garis); border-radius:0; text-align:left; white-space:normal; height:auto; padding:10px; }
+.role-activity-results button:focus, .role-activity-results button:hover { background:#e6f1fc; }
+.role-upload-dialog { width:min(760px,calc(100vw - 32px)); }
+.role-upload-dialog .role-dialog-body { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.role-upload-dialog .role-field:nth-child(1), .role-upload-dialog .role-field:nth-child(2), .role-upload-dialog .role-field:nth-child(6), .role-upload-dialog .role-field:nth-child(11), .role-upload-dialog .role-field:nth-child(12), .role-upload-dialog .role-dialog-actions, .role-upload-dialog .role-error { grid-column:1 / -1; }
+@media(max-width:600px) { .role-upload-dialog .role-dialog-body { grid-template-columns:1fr; } }
+#layar-aktivitas #tabel-aktivitas.role-manager-table .k-no { width:3%; }
+#layar-aktivitas #tabel-aktivitas.role-manager-table .k-flag { width:6%; }
+#layar-aktivitas #tabel-aktivitas.role-manager-table .k-komp { width:10%; }
+#layar-aktivitas #tabel-aktivitas.role-manager-table .k-kode { width:4%; }
+#layar-aktivitas #tabel-aktivitas.role-manager-table .k-akt { width:17%; }
+#layar-aktivitas #tabel-aktivitas.role-manager-table .k-pilar { width:9%; }
+#layar-aktivitas #tabel-aktivitas.role-manager-table .k-div { width:8%; }
+#layar-aktivitas #tabel-aktivitas.role-manager-table .k-pic { width:7%; }
+#layar-aktivitas #tabel-aktivitas.role-manager-table .k-stat { width:11%; }
+#layar-aktivitas #tabel-aktivitas.role-manager-table .k-cat { width:6%; }
+#layar-aktivitas #tabel-aktivitas.role-manager-table .role-actions-head { width:9%; padding:12px 8px; }

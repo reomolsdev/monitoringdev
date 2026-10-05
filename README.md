@@ -2,7 +2,9 @@
 
 Halaman berada langsung di root repository. `index.html` menampilkan Dashboard, sehingga GitHub Pages dengan sumber branch `main`, folder `/ (root)`, membuka Dashboard pada `/monitoringdev/`.
 
-Halaman lain: `aktivitas.html`, `kpi.html`, `timeline.html`, `me.html`, `pendanaan.html`, `laporan.html`, dan `pengaturan.html`. `kerangka.html` tetap tersedia sebagai versi seluruh menu dalam satu file.
+Aktivitas dan KPI dikelompokkan di `BOD/`, `Manager/`, `Staf/`, dan `PIC/`. Default navigasi adalah BOD; pemilih role berpindah URL untuk halaman Aktivitas/KPI. Route lama `aktivitas.html` dan `kpi.html` mengarahkan ke BOD.
+
+Halaman lain: `timeline.html`, `me.html`, `pendanaan.html`, `laporan.html`, dan `pengaturan.html`. `kerangka.html` tetap tersedia sebagai versi seluruh menu dalam satu file.
 
 `assets/css/` berisi CSS khusus Laporan. `assets/js/` berisi katalog aktivitas dari Excel, interaksi dokumen Laporan, dan pencarian/filter pada Aktivitas. `src/` mempertahankan model data yang sudah ada.
 
@@ -23,3 +25,5 @@ Katalog Laporan mengacu pada 88 aktivitas di sheet **Aktivitas per Flagship** pa
 Filter periode mencakup Q1 (Januari–Maret), Q2 (April–Juni), Q3 (Juli–September), Q4 (Oktober–Desember), Semester 1, Semester 2, dan Tahunan. Periode dicocokkan dengan kategori periode dokumen; tahun dipilih secara terpisah. Semua filter berawal pada pilihan Semua, sehingga seluruh dokumen tersedia dalam daftar.
 
 Kode strategi mengikuti sheet **Ringkasan 9 Flagship**: AILOS → ST3, PROGRES/ADCEND → ST1, R-MODE → WT2, FLEXERA/CREATE/CODEA/NEXEL → WT3, dan COALA → WO2. Dokumen flagship mendapat strategi otomatis, termasuk dokumen yang telah tersimpan sebelum filter ini ditambahkan. Dokumen lintas program dapat diberi strategi secara manual. Kode strategi berbeda dari kode aktivitas T1/R1/I1/C1.
+
+Folder ekspor `figma/`, paket ZIP Figma, dan `design-options/` sudah dihapus. Gunakan route per role untuk impor melalui URL GitHub Pages.
