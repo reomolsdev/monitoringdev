@@ -5,7 +5,7 @@
   const root = new URL('../../', scriptURL);
   const current = new URL(location.href);
   const path = decodeURIComponent(current.pathname.slice(root.pathname.length));
-  const match = path.match(/^(BOD|Manager|Staf|PIC)\/(aktivitas(?:-subtaskopened|-addtask|-approval|-flagship|-komentar|-addactivity)?|kpi)\.html$/);
+  const match = path.match(/^(BOD|Manager|Staf|PIC)\/(aktivitas|kpi)\.html$/);
   function links(role) {
     document.querySelectorAll('a[href]').forEach(a => {
       if (a.getAttribute('href').startsWith('#')) return;

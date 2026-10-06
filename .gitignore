@@ -3,3 +3,6 @@
 
 # Browser diagnostic output
 /debug.log
+
+# Local HTML/CSS design exports; never publish
+/popup/
