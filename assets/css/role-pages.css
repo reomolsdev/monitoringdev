@@ -131,3 +131,14 @@ body.role-pages [hidden] { display:none !important; }
 
 .role-doc-status.role-doc-plain.role-doc-approved { color:#07843c; font-weight:600; }
 .role-doc-status.role-doc-plain.role-doc-pending { color:#ad7100; font-weight:600; }
+.role-numbered-document { display:flex; align-items:center; gap:5px; margin-top:5px; font-size:11px; }
+.role-numbered-document a { color:var(--biru); text-decoration:none; }
+.role-numbered-document a:hover { text-decoration:underline; }
+.role-document-status-icon { width:19px; height:19px; flex-shrink:0; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.role-document-icon-approved { color:#07843c; }
+.role-document-icon-pending { color:#bc8500; }
+.role-document-icon-revision { color:#1967b3; }
+.role-actions-cell>.role-icon { display:flex; margin-top:6px; }
+
+.role-numbered-document .role-document-label { color:#6b7785; font-style:normal; white-space:nowrap; }
+.role-numbered-document { min-height:22px; }
