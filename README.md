@@ -27,3 +27,5 @@ Filter periode mencakup Q1 (Januari–Maret), Q2 (April–Juni), Q3 (Juli–Sept
 Kode strategi mengikuti sheet **Ringkasan 9 Flagship**: AILOS → ST3, PROGRES/ADCEND → ST1, R-MODE → WT2, FLEXERA/CREATE/CODEA/NEXEL → WT3, dan COALA → WO2. Dokumen flagship mendapat strategi otomatis, termasuk dokumen yang telah tersimpan sebelum filter ini ditambahkan. Dokumen lintas program dapat diberi strategi secara manual. Kode strategi berbeda dari kode aktivitas T1/R1/I1/C1.
 
 Folder ekspor `figma/`, paket ZIP Figma, dan `design-options/` sudah dihapus. Gunakan route per role untuk impor melalui URL GitHub Pages.
+
+Route desain Staf: `Staf/aktivitas-subtaskopened.html` membuka subtask dan `Staf/aktivitas-addtask.html` membuka form tambah subtask. Keduanya menggunakan aktivitas contoh I1 AILOS secara default. Parameter `?activity=activity-3` (atau ID aktivitas lain) mempertahankan aktivitas yang dipilih. Tombol Staf berpindah URL; simpan/batal kembali ke route subtask terbuka.

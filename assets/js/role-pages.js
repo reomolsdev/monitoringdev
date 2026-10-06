@@ -80,7 +80,12 @@
   const demoComments=[{name:'Andi Darmawan',role:'BOD',actor:'Andi Darmawan (BOD)',text:'Pastikan bukti capaian sesuai dengan target tahun 2026 sebelum laporan diajukan.',time:'2026-10-01T02:00:00Z'},{name:'Manajer Program',role:'Manajer Program',actor:'Manajer Program',text:'Dokumen pendukung sedang dilengkapi bersama tim pelaksana.',time:'2026-10-02T03:30:00Z'}];items=items.map((d,i)=>({...d,comments:d.comments===undefined&&i<4?demoComments.map(c=>({...c})):d.comments||[]}));
   let subtasks=read('seamolec-role-subtasks-v1',[{id:'sample-sub-1',parent:'activity-3',title:'Audit kebutuhan konektivitas',owner:'Staf',due:'2026-06-10',status:'Selesai'},{id:'sample-sub-2',parent:'activity-3',title:'Uji coba akses offline',owner:'Staf',due:'2026-06-30',status:'On track'},{id:'sample-sub-3',parent:'activity-3',title:'Dokumentasi pilot',owner:'Staf',due:'2026-07-15',status:'Belum mulai'}]);
 
-  const expanded=new Set();let page=1,matches=[];
+  const staffRoute=location.pathname.match(/\/Staf\/aktivitas-(subtaskopened|addtask)\.html$/)?.[1];
+  const requestedId=new URLSearchParams(location.search).get('activity');
+  const routeParent=items.find(d=>d.id===(requestedId||'activity-3')&&!d.deleted)||items.find(d=>!d.deleted);
+  const expanded=new Set(staffRoute&&routeParent?[routeParent.id]:[]);let page=1,matches=[];
+  function staffNavigate(state,id){const url=new URL(state==='closed'?'aktivitas.html':`aktivitas-${state}.html`,location.href);if(id)url.searchParams.set('activity',id);location.assign(url.href);}
+  dialog.addEventListener('close',()=>{if(role==='staf'&&staffRoute==='addtask')staffNavigate('subtaskopened',dialog.dataset.parent||routeParent?.id);});
 
   const normalize=s=>String(s||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 
@@ -110,7 +115,7 @@
 
   function editSubtask(s){if(role!=='staf'||s.owner!=='Staf'||(s.ownerName&&s.ownerName!==account().name))return;const form=popup('Update subtask'),status=field(form,'Status',s.status,['Belum mulai','On track','Perlu perhatian','Selesai']),note=field(form,'Catatan kegiatan',s.description||'',null,'textarea');actions(form,'Simpan subtask',()=>{const next=subtasks.map(x=>x.id===s.id?audit({...x,status:status.value,description:note.value},'Update subtask'):x);if(!save('seamolec-role-subtasks-v1',next))return false;subtasks=next;render();},['staf']);}
 
-  function addSubtask(parent=null){if(role!=='staf')return;const form=popup('Tambah subtask'),sel=field(form,'Aktivitas induk',parent?.id||'activity-3',items.filter(d=>!d.deleted).map(d=>({value:d.id,label:`${d.flag} · ${d.code} — ${d.title}`}))),title=field(form,'Judul subtask',''),description=field(form,'Deskripsi','',null,'textarea',false),owner=field(form,'Penanggung jawab',account().name+' (Staf)'),due=field(form,'Tenggat','',null,'date');owner.disabled=true;actions(form,'Simpan subtask',()=>{const next=[...subtasks,{id:crypto.randomUUID(),parent:sel.value,title:title.value,description:description.value,owner:'Staf',ownerName:account().name,due:due.value,status:'Belum mulai'}];if(!save('seamolec-role-subtasks-v1',next))return false;subtasks=next;expanded.add(sel.value);render();},['staf']);}
+  function addSubtask(parent=null){if(role!=='staf')return;if(staffRoute!=='addtask'){staffNavigate('addtask',parent?.id||routeParent?.id);return;}const form=popup('Tambah subtask'),sel=field(form,'Aktivitas induk',parent?.id||routeParent?.id||'activity-3',items.filter(d=>!d.deleted).map(d=>({value:d.id,label:`${d.flag} · ${d.code} — ${d.title}`}))),title=field(form,'Judul subtask',''),description=field(form,'Deskripsi','',null,'textarea',false),owner=field(form,'Penanggung jawab',account().name+' (Staf)'),due=field(form,'Tenggat','',null,'date');owner.disabled=true;dialog.dataset.parent=sel.value;sel.onchange=()=>dialog.dataset.parent=sel.value;actions(form,'Simpan subtask',()=>{const next=[...subtasks,{id:crypto.randomUUID(),parent:sel.value,title:title.value,description:description.value,owner:'Staf',ownerName:account().name,due:due.value,status:'Belum mulai'}];if(!save('seamolec-role-subtasks-v1',next))return false;subtasks=next;expanded.add(sel.value);render();},['staf']);}
 
   function upload(parent=null){
    if(role!=='manajer')return;
@@ -147,7 +152,7 @@
 
     const pillarCell=node('span',undefined,'pilar-sel');pillarCell.append(node('span',d.pillar.charAt(0),'pilar-tanda'),node('span',d.pillar,'pilar-nama'));row.cells[5].replaceChildren(pillarCell);row.cells[4].classList.add('td-aktivitas');
 
-    const tools=node('div',undefined,'role-row-tools');const toggle=link('',()=>{expanded.has(d.id)?expanded.delete(d.id):expanded.add(d.id);render();});toggle.classList.add('role-subtask-toggle');toggle.setAttribute('aria-label','See Subtask ('+subtasks.filter(s=>s.parent===d.id).length+')');toggle.setAttribute('aria-expanded',String(expanded.has(d.id)));toggle.append(node('span',expanded.has(d.id)?'⌃':'⌄','role-subtask-arrow'),node('span','See Subtask ('+subtasks.filter(s=>s.parent===d.id).length+')'));tools.append(toggle);
+    const tools=node('div',undefined,'role-row-tools');const toggle=link('',()=>{if(role==='staf'){staffNavigate(expanded.has(d.id)?'closed':'subtaskopened',d.id);return;}expanded.has(d.id)?expanded.delete(d.id):expanded.add(d.id);render();});toggle.classList.add('role-subtask-toggle');toggle.setAttribute('aria-label','See Subtask ('+subtasks.filter(s=>s.parent===d.id).length+')');toggle.setAttribute('aria-expanded',String(expanded.has(d.id)));toggle.append(node('span',expanded.has(d.id)?'⌃':'⌄','role-subtask-arrow'),node('span','See Subtask ('+subtasks.filter(s=>s.parent===d.id).length+')'));tools.append(toggle);
 
     if(role==='manajer'){if(d.submission==='Menunggu verifikasi Manager')tools.append(link('Verifikasi progres',()=>{if(role!=='manajer')return;commit(items.map(i=>i.id===d.id?audit({...i,status:i.proposedStatus||i.status,submission:'Progres tervalidasi'},'Manager memverifikasi progres'):i));}));}if(role==='staf')tools.append(link('+ Subtask',()=>addSubtask(d)));row.cells[4].append(tools);row.cells[9].replaceChildren(node('span',d.comments?.length?d.comments[d.comments.length-1].text:(d.note||'—'),'role-comment-preview'),link('Detail / komentar',()=>details(d)),link('Dokumen',()=>viewDocs(d)));if(d.submission)row.cells[9].append(node('span',d.submission,'role-status'));if(role==='manajer'){const statusWrap=node('div',undefined,'role-inline-status'),select=node('select',undefined,'role-status-select');['Belum mulai','On track','Perlu perhatian','Selesai','Ditunda'].forEach(v=>select.add(new Option(v,v)));select.value=d.status;select.setAttribute('aria-label','Ubah status '+d.title);select.onchange=()=>{if(role!=='manajer')return;commit(items.map(i=>i.id===d.id?audit({...i,status:select.value},'Mengubah status menjadi '+select.value):i));};statusWrap.append(badge(d.status),node('span','⌄','role-status-chevron'),select);row.cells[8].replaceChildren(statusWrap);const cell=node('td',undefined,'role-actions-cell');const actionGroup=node('div',undefined,'role-actions-group');actionGroup.append(icon('edit','Edit aktivitas '+d.title,()=>editor(d)),icon('delete','Hapus aktivitas '+d.title,()=>removeActivity(d)));cell.append(actionGroup);row.append(cell);}body.append(row);
 
@@ -167,7 +172,8 @@
 
   $('hasil-kosong').textContent='Tidak ada aktivitas yang cocok. Ubah pencarian atau reset filter.';
 
-  window.renderRolePage=()=>{page=1;render();};
+  window.renderRolePage=()=>{page=staffRoute&&routeParent?Math.floor(items.filter(d=>!d.deleted).findIndex(d=>d.id===routeParent.id)/10)+1:1;render();};
+  window.openStaffRoute=()=>{if(role==='staf'&&staffRoute==='addtask')addSubtask(routeParent);};
 
  } else {
 
@@ -209,7 +215,7 @@
 
  function changeRole(){dialog.close();role=selector.value;notice.textContent=role==='staf'?'Akses lihat'+(activity?' · Staf dapat menambahkan subtask.':'.'):role==='pic'?'Penugasan contoh: '+account().name+' · '+(activity?'Akses lihat aktivitas; upload dokumen dinonaktifkan.':'Akses lihat KPI; update bukti dilakukan melalui Aktivitas.'):role==='bod'?'BOD · Kelola flagship, KPI, dan persetujuan dokumen.':'Manajer Program · '+(activity?'Kelola aktivitas dan verifikasi dokumen.':'Pantau realisasi dan ajukan target tahunan kepada BOD.');window.renderRolePage();updateInbox();}
 
- selector.onchange=changeRole;changeRole();
+ selector.onchange=changeRole;changeRole();window.openStaffRoute?.();
 
 })();
 

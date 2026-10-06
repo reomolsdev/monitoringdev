@@ -5,7 +5,7 @@
   const root = new URL('../../', scriptURL);
   const current = new URL(location.href);
   const path = decodeURIComponent(current.pathname.slice(root.pathname.length));
-  const match = path.match(/^(BOD|Manager|Staf|PIC)\/(aktivitas|kpi)\.html$/);
+  const match = path.match(/^(BOD|Manager|Staf|PIC)\/(aktivitas(?:-subtaskopened|-addtask)?|kpi)\.html$/);
   function links(role) {
     document.querySelectorAll('a[href]').forEach(a => {
       if (a.getAttribute('href').startsWith('#')) return;
@@ -22,7 +22,7 @@
   links(initial);
   selector.addEventListener('change', () => {
     if (!folders[selector.value]) return;
-    if (match) location.assign(new URL(folders[selector.value] + '/' + match[2] + '.html', root).href);
+    if (match) location.assign(new URL(folders[selector.value] + '/' + (match[2].startsWith('aktivitas')?'aktivitas':match[2]) + '.html', root).href);
     else links(selector.value);
   });
 })();
