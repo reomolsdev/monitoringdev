@@ -69,6 +69,13 @@ body.role-pages [hidden] { display:none !important; }
 .role-comment-preview { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-style:normal; font-size:11px; }
 .role-approval-list { display:grid; gap:8px; }
 .role-approval-item { background:white; color:var(--teks); width:100%; text-align:left; cursor:pointer; }
+.role-approval-dialog { width:min(1100px,calc(100vw - 40px)); }
+.role-approval-dialog .role-dialog-body { grid-template-columns:minmax(240px, 1fr) minmax(0, 2fr); align-items:start; gap:24px; }
+.role-approval-dialog .role-approval-list { max-height:65vh; overflow:auto; }
+.role-approval-detail { display:grid; gap:14px; min-width:0; }
+.role-approval-item.is-selected { border-color:var(--biru); background:#f2f7fd; }
+.role-row-tools button:disabled, .role-pages .td-kosong button:disabled { color:var(--teks-redup); cursor:default; opacity:.55; }
+@media(max-width:700px) { .role-approval-dialog .role-dialog-body { grid-template-columns:1fr; } .role-approval-dialog .role-approval-list { max-height:180px; } }
 .role-status-button { display:inline-flex; align-items:center; gap:4px; background:transparent; border:0; padding:0; cursor:pointer; color:var(--teks-redup); }
 .role-inbox-count { position:absolute; right:-7px; top:-7px; min-width:18px; height:18px; padding:2px 4px; border-radius:9px; background:var(--biru); color:white; font-size:10px; }
 .role-activity-results { max-height:220px; overflow:auto; border:1px solid var(--garis); border-radius:6px; }

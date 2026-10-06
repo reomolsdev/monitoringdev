@@ -29,3 +29,5 @@ Kode strategi mengikuti sheet **Ringkasan 9 Flagship**: AILOS → ST3, PROGRES/A
 Folder ekspor `figma/`, paket ZIP Figma, dan `design-options/` sudah dihapus. Gunakan route per role untuk impor melalui URL GitHub Pages.
 
 Route desain Staf: `Staf/aktivitas-subtaskopened.html` membuka subtask dan `Staf/aktivitas-addtask.html` membuka form tambah subtask. Keduanya menggunakan aktivitas contoh I1 AILOS secara default. Parameter `?activity=activity-3` (atau ID aktivitas lain) mempertahankan aktivitas yang dipilih. Tombol Staf berpindah URL; simpan/batal kembali ke route subtask terbuka.
+
+Route popup Aktivitas BOD: `BOD/aktivitas-approval.html`, `BOD/aktivitas-flagship.html`, dan `BOD/aktivitas-komentar.html`. Route popup Manager: `Manager/aktivitas-addactivity.html` dan `Manager/aktivitas-komentar.html`. Popup langsung terbuka saat route diakses. Detail/komentar BOD dan Manager memakai aktivitas pertama tanpa parameter ID. Tombol approval aktif setelah tautan dokumen yang dipilih diklik; ini mencatat pembukaan tautan, bukan verifikasi bahwa isi dokumen sudah dibaca.
