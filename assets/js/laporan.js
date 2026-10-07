@@ -93,7 +93,16 @@
       const flagship = node('td'); flagship.append(node('span', d.flagship || 'Lintas flagship', 'td-flag'), node('span', d.strategi ? 'Strategi '+d.strategi : 'Strategi umum', 'laporan-document-sub'), node('span', d.kode ? 'Aktivitas '+d.kode : 'Aktivitas umum', 'laporan-document-sub')); tr.append(flagship);
       tr.append(node('td', d.divisi), node('td', d.tahun + ' · ' + d.periode), node('td', d.jenis));
       const preview = node('td'), button = node('button', 'Preview', 'tombol laporan-preview-button'); button.type = 'button'; button.setAttribute('aria-label','Preview ' + d.judul); button.addEventListener('click', () => showPreview(d)); preview.append(button); tr.append(preview);
-      const holder = node('div', undefined, 'laporan-actions'); holder.append(button, action('Update ' + d.judul, 'update', () => openEditor(d)), action('Hapus ' + d.judul, 'delete', () => { deleting = d.id; $('lap-delete-nama').textContent = d.judul; $('lap-delete').showModal(); })); preview.replaceChildren(holder);
+      tr.tabIndex = 0;
+      tr.setAttribute('aria-label', 'Lihat preview ' + d.judul);
+      tr.addEventListener('click', event => {
+        if (!event.target.closest('a, button')) showPreview(d);
+      });
+      tr.addEventListener('keydown', event => {
+        if (event.target === tr && ['Enter', ' '].includes(event.key)) {
+          event.preventDefault(); showPreview(d);
+        }
+      });
       [...tr.cells].forEach((cell, i) => cell.dataset.label = ['Dokumen / tautan','Flagship / kode','Divisi','Periode','Jenis','Aksi'][i]);
       body.append(tr);
     });

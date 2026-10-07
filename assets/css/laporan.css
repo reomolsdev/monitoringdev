@@ -16,7 +16,7 @@
 #layar-laporan .laporan-tabel th:nth-child(6) { width: 9%; }
 #layar-laporan .laporan-tabel th:nth-child(7) { width: 8%; }
 #layar-laporan .laporan-tabel td { vertical-align: middle; overflow-wrap: anywhere; }
-#layar-laporan .laporan-tabel tr { cursor: default; }
+#layar-laporan .laporan-tabel tbody tr { cursor: pointer; }
 #layar-laporan .laporan-document-title { display: block; font-weight: 500; margin-bottom: 4px; }
 #layar-laporan .laporan-demo { display: inline-block; font-size: 10px; margin-bottom: 4px; padding: 2px 6px; border-radius: 4px; background: var(--biru-lembut); color: var(--biru); }
 #layar-laporan .laporan-document-link { display: block; font-size: 12px; color: var(--biru); text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
@@ -162,3 +162,5 @@
  #layar-laporan .laporan-search-input { flex-basis:100%; max-width:none; }
  #layar-laporan .laporan-period-row { gap:16px; }
 }
+
+#layar-laporan .laporan-tabel tbody tr:focus-visible { outline:2px solid var(--biru); outline-offset:-2px; }
