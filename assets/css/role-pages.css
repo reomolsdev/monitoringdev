@@ -219,3 +219,14 @@ body.role-pages [hidden] { display:none !important; }
 @media(hover:none) { .role-detail-open { opacity:1; } }
 
 .role-dialog-actions>.role-note { margin:0 auto 0 0; align-self:center; font-size:12px; }
+.role-detail-tools { display:flex; align-items:center; gap:10px; margin-top:6px; min-height:34px; }
+.role-detail-tools .role-icon { flex-shrink:0; margin:0; }
+.role-detail-tools .role-activity-review-indicator { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; margin:0; flex-shrink:0; }
+.role-detail-tools .role-activity-review-indicator:empty { display:none; }
+.role-detail-tools .role-activity-review-indicator svg { width:18px; height:18px; }
+#tabel-aktivitas .role-icon { width:34px; height:34px; box-sizing:border-box; }
+#tabel-aktivitas .role-actions-group { min-height:34px; }
+#tabel-aktivitas .role-comment-preview { height:35.2px; line-height:1.6; }
+#tabel-aktivitas .role-actions-cell>.role-actions-group { margin-top:41.2px; }
+#navbar-notification-button[hidden], #navbar-notification-button [hidden], .role-notification-dialog [hidden] { display:none !important; }
+.role-notification-dialog .role-document .role-icon { width:34px; height:34px; }

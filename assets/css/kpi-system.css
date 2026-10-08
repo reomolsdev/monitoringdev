@@ -1,0 +1,35 @@
+.kpi-scope-filter { display:flex; gap:16px; margin:20px 0; flex-wrap:wrap; }
+.kpi-scope-filter .role-field { min-width:150px; max-width:260px; }
+.kpi-scope-filter select { width:100%; }
+#layar-kpi .kpi-kaki { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:16px; }
+.role-pages #kpi-ringkas { display:grid; gap:10px; margin:0; }
+.kpi-summary-label { display:block; }
+.kpi-summary-statuses { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+#layar-kpi .kpi-summary-actions { justify-content:flex-end; align-items:center; gap:8px; }
+#layar-kpi .kpi-summary-actions .role-toolbar { justify-content:flex-end; }
+#layar-kpi .kpi-summary-actions .tombol { padding:0 10px; font-size:12px; }
+.kpi-year-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; }
+.kpi-result-line { display:grid; gap:6px; padding:14px 0; border-bottom:1px solid var(--garis,#dce5ee); }
+.kpi-result-line span,.kpi-result-line small { color:var(--teks-redup,#60758b); font-size:12px; }
+.kpi-result-line .tombol { justify-self:start; }
+.role-kpi-activity-panel { border:1px solid var(--garis,#dce5ee); border-radius:8px; padding:14px; display:grid; gap:10px; }
+.role-kpi-activity-panel h3 { font-size:14px; }
+.role-kpi-activity-panel .role-note { margin:0; }
+.role-kpi-kind { font-size:12px; font-weight:600; }
+.role-kpi-approval-effect { font-size:12px; line-height:1.6; background:#f3f7fc; padding:10px 12px; border-radius:6px; }
+#layar-kpi .kk-rumus .role-link { color:inherit; text-align:left; line-height:1.6; font-weight:400; }
+#layar-kpi .kk-realisasi { font-variant-numeric:tabular-nums; }
+.kpi-target-line { display:flex; justify-content:flex-end; align-items:center; gap:8px; min-height:28px; }
+.kpi-target-line .kpi-target-edit { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; padding:0; flex-shrink:0; font-size:18px; }
+.kpi-editor-dialog .role-field textarea { min-height:65px; }
+.kpi-editor-dialog .role-dialog-body { gap:12px; }
+.kpi-editor-dialog .role-note { margin:0; font-size:11px; }
+.kpi-flagship-field { position:relative; }
+.kpi-flagship-field input[readonly] { cursor:pointer; padding-right:32px; }
+.kpi-flagship-chevron { position:absolute; right:12px; bottom:10px; line-height:18px; pointer-events:none; color:var(--teks-redup); font-size:18px; }
+.kpi-flagship-options { position:absolute; top:100%; left:0; right:0; z-index:10; padding:6px; margin-top:4px; max-height:215px; overflow:auto; background:white; border:1px solid var(--garis-kuat); border-radius:6px; box-shadow:0 6px 20px #1c2a361a; }
+.kpi-flagship-option { display:flex; align-items:center; gap:9px; padding:8px; cursor:pointer; border-radius:4px; }
+.kpi-flagship-option:hover { background:#f2f7fd; }
+.kpi-editor-dialog .role-field .kpi-flagship-option input { width:16px; height:16px; padding:0; accent-color:var(--biru); flex-shrink:0; }
+@media(max-width:600px) { .kpi-year-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:1100px) { #layar-kpi .kpi-kaki { grid-template-columns:1fr; } }

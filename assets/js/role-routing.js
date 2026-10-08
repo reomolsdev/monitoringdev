@@ -17,11 +17,14 @@
     });
   }
   if (!selector) return;
-  const initial = match ? Object.keys(folders).find(key => folders[key] === match[1]) : 'bod';
+  let savedRole='bod';try{savedRole=localStorage.getItem('seamolec-active-role')||'bod';}catch{}
+  const initial = match ? Object.keys(folders).find(key => folders[key] === match[1]) : folders[savedRole]?savedRole:'bod';
+  try{localStorage.setItem('seamolec-active-role',initial);}catch{}
   selector.value = initial;
   links(initial);
   selector.addEventListener('change', () => {
     if (!folders[selector.value]) return;
+    try{localStorage.setItem('seamolec-active-role',selector.value);}catch{}
     if (match) location.assign(new URL(folders[selector.value] + '/' + (match[2].startsWith('aktivitas')?'aktivitas':match[2]) + '.html', root).href);
     else links(selector.value);
   });
