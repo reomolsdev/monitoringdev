@@ -164,3 +164,6 @@
 }
 
 #layar-laporan .laporan-tabel tbody tr:focus-visible { outline:2px solid var(--biru); outline-offset:-2px; }
+#layar-laporan .laporan-preview-button { width:34px; height:34px; padding:6px; display:inline-flex; align-items:center; justify-content:center; color:var(--biru); }
+#layar-laporan .laporan-preview-button svg { flex:none; }
+#layar-laporan .laporan-period-row .filter-medan:has(#lap-status) { width:180px; }

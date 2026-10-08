@@ -142,3 +142,80 @@ body.role-pages [hidden] { display:none !important; }
 
 .role-numbered-document .role-document-label { color:#6b7785; font-style:normal; white-space:nowrap; }
 .role-numbered-document { min-height:22px; }
+
+.role-detail-review { display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:12px; margin-top:14px; }
+.role-detail-links { display:grid; gap:12px; }
+.role-detail-links h3, .role-detail-comments-title { font-size:14px; font-weight:500; }
+.role-detail-link-list { display:grid; gap:12px; }
+.role-detail-link-row { display:flex; align-items:end; gap:8px; }
+.role-detail-link-row .role-field { flex:1; }
+.role-detail-open { display:grid; place-items:center; width:36px; height:36px; flex-shrink:0; border:1px solid var(--garis); border-radius:6px; color:var(--biru); text-decoration:none; opacity:0; }
+.role-detail-link-row:hover .role-detail-open, .role-detail-link-row:focus-within .role-detail-open { opacity:1; }
+.role-detail-add { justify-self:center; width:32px; height:32px; border:1px solid var(--garis); border-radius:6px; background:white; color:var(--biru); font-size:22px; cursor:pointer; }
+.role-detail-add:disabled { color:var(--teks-redup); background:#f1f4f7; cursor:default; }
+.role-doc-rejected { background:#ffe1e1; color:#b52727; }
+.role-chat-dialog .role-dialog-head h2 { flex:1; }
+.role-chat-dialog .role-dialog-head .role-doc-status { flex-shrink:0; }
+.role-detail-title { font-size:17px; font-weight:600; line-height:1.5; }
+.role-detail-realization { font-size:14px; margin:0; }
+.role-activity-review-indicator { display:inline-flex; align-items:center; margin-top:7px; }
+.role-activity-review-indicator svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.role-review-pending { color:#1967b3; }
+.role-review-overdue { color:#b77907; }
+.role-editor-dialog { width:min(720px,calc(100vw - 32px)); }
+.role-editor-dialog .role-dialog-head { padding:16px 22px; }
+.role-editor-dialog .role-dialog-body { padding:20px 22px; gap:13px; }
+.role-editor-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.role-editor-title-row { grid-template-columns:minmax(0,3fr) minmax(100px,1fr); }
+.role-editor-dialog .role-field { gap:5px; }
+.role-editor-dialog .role-field :is(input,select) { height:39px; }
+.role-editor-adornment { position:relative; min-width:0; }
+.role-editor-adornment>span { position:absolute; top:50%; transform:translateY(-50%); color:var(--teks-redup); font-size:12px; pointer-events:none; }
+.role-editor-prefix>span { left:12px; }
+.role-editor-prefix input { padding-left:36px; }
+.role-editor-suffix>span { right:12px; }
+.role-editor-suffix input { padding-right:30px; }
+.role-editor-realization { display:grid; grid-template-columns:112px minmax(0,1fr); gap:8px; min-width:0; }
+.role-editor-hint { color:var(--teks-redup); font-size:11px; margin:0; }
+.role-pages .td-kosong>.role-icon { margin-top:5px; }
+.role-editor-dialog .role-dialog-actions { padding-top:12px; }
+.role-editor-dialog .role-error:empty { display:none; }
+.role-flagship-dialog { width:min(850px,calc(100vw - 32px)); }
+.role-flagship-dialog .role-dialog-body { gap:16px; }
+.role-flagship-dialog .role-dialog-body>.role-note { margin:0; }
+.role-flagship-layout { display:grid; grid-template-columns:210px minmax(0,1fr); gap:24px; align-items:start; }
+.role-flagship-sidebar { display:grid; gap:12px; }
+.role-flagship-add { width:100%; }
+.role-flagship-list { display:grid; gap:6px; max-height:380px; overflow:auto; }
+.role-flagship-item { display:grid; gap:4px; width:100%; padding:12px; border:1px solid var(--garis); border-radius:7px; background:white; color:var(--teks); text-align:left; font:inherit; cursor:pointer; }
+.role-flagship-item strong { font-size:12px; font-weight:600; }
+.role-flagship-item span,.role-flagship-item small { font-size:11px; color:var(--teks-redup); }
+.role-flagship-item.is-selected { border-color:var(--biru); background:#f2f7fd; }
+.role-flagship-editor { display:grid; gap:13px; min-width:0; }
+.role-flagship-editor h3 { font-size:16px; font-weight:600; }
+.role-flagship-success { font-size:12px; color:#247340; background:#eaf6ee; border-radius:6px; padding:10px; }
+.role-flagship-editor .role-error:empty { display:none; }
+@media(max-width:650px) { .role-flagship-layout { grid-template-columns:1fr; } .role-flagship-list { max-height:140px; } }
+@media(max-width:560px) { .role-editor-row,.role-editor-title-row { grid-template-columns:1fr; } }
+@media(max-width:500px) { .role-chat-dialog .role-dialog-head { flex-wrap:wrap; } }
+.role-detail-comments-title { border-top:1px solid var(--garis); padding-top:18px; }
+.role-activity-notification { position:relative; padding:16px; }
+.role-activity-notification.is-unread { border-left:3px solid var(--biru); }
+.role-notification-meta { display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; }
+.role-notification-event { color:var(--biru); font-size:12px; font-weight:600; }
+.role-notification-count { font-size:12px; color:var(--teks-redup); }
+.role-notification-time { font-size:11px; color:var(--teks-redup); }
+.role-notification-open { justify-self:start; margin-top:4px; }
+.role-revision-hint { margin:0; }
+.role-notification-tabs { display:flex; gap:20px; border-bottom:1px solid var(--garis); }
+.role-notification-tab { display:inline-flex; align-items:center; gap:8px; border:0; border-bottom:2px solid transparent; padding:8px 0 12px; background:none; font:inherit; color:var(--teks-redup); cursor:pointer; }
+.role-notification-tab.is-active { border-bottom-color:var(--biru); color:var(--biru); font-weight:600; }
+.role-notification-badge { display:inline-flex; justify-content:center; align-items:center; min-width:21px; height:21px; padding:0 5px; border-radius:50px; background:#e5effb; color:var(--biru); font-size:11px; font-weight:600; }
+.role-comment-notification { padding:16px; }
+.role-comment-notification.is-unread { border-left:3px solid var(--biru); }
+.role-notification-comment { margin:0; line-height:1.6; white-space:pre-wrap; overflow-wrap:anywhere; }
+.role-chat-send-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+.role-revision-guide { margin:0; color:var(--biru); font-size:12px; line-height:1.5; }
+@media(hover:none) { .role-detail-open { opacity:1; } }
+
+.role-dialog-actions>.role-note { margin:0 auto 0 0; align-self:center; font-size:12px; }

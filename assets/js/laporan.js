@@ -3,12 +3,16 @@
   const screen = document.getElementById('layar-laporan');
   if (!screen) return;
   const $ = id => document.getElementById(id);
-  const catalog = window.ReportActivities || [];
-  const strategyMap = window.ReportStrategies || {};
+  const readLocal=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}};
+  let activityRecords=readLocal('seamolec-role-activities-v1',{});
+  const savedPrograms=readLocal('seamolec-role-flagships-v1',[]);
+  const catalog = [...(window.ReportActivities || []),...Object.values(activityRecords).filter(d=>d?.flag&&d?.code).map(d=>({id:d.id,flagship:d.flag,kode:d.code,divisi:d.division,judul:d.title,tahun:d.year||'2026'}))];
+  const strategyMap = {...(window.ReportStrategies || {})};
+  if(Array.isArray(savedPrograms))savedPrograms.forEach(p=>{if(p.strategy)strategyMap[p.name]=p.strategy;});
   const strategies = ['ST1','ST3','WT2','WT3','WO2'];
   const periods = ['Tahunan','Q1','Q2','Q3','Q4','Semester 1','Semester 2'];
   const types = ['Laporan kuartalan', 'Laporan tahunan', 'Laporan Dampak Tahunan', 'Laporan teknis', 'Laporan keuangan', 'Audit / evaluasi', 'Notulen / kebijakan', 'Bukti aktivitas'];
-  const flags = [...new Set(catalog.map(a => a.flagship))];
+  const flags = [...new Set([...catalog.map(a => a.flagship),...(Array.isArray(savedPrograms)?savedPrograms.map(p=>p.name):[])])];
   const divisions = [...new Set(catalog.map(a => a.divisi))].sort();
   const key = 'seamolec-report-documents-v1';
   const normalize = text => String(text || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -65,10 +69,16 @@
     try { if (storageError) throw new Error(); localStorage.setItem(key, JSON.stringify(next)); docs = next; return true; }
     catch { $('lap-notice').textContent = 'Perubahan belum disimpan: penyimpanan browser tidak tersedia. Coba browser biasa dengan penyimpanan lokal aktif.'; return false; }
   }
+  function approved(d) {
+    const id = d.activityId || d.aktivitas;
+    const activity = (id ? activityRecords[id] : null)
+      || (d.flagship && d.kode ? Object.values(activityRecords).find(a => a && a.flag === d.flagship && a.code === d.kode) : null);
+    return (activity?.activityReviewStatus || d.reviewStatus) === 'Disetujui';
+  }
   function filtered() {
-    const f = Object.fromEntries(['flagship','strategi','kode','divisi','tahun','periode','jenis','cari'].map(k => [k, $('lap-' + k).value]));
+    const f = Object.fromEntries(['flagship','strategi','kode','divisi','tahun','jenis','status','cari'].map(k => [k, $('lap-' + k).value]));
     const words = normalize(f.cari).trim().split(/\s+/).filter(Boolean);
-    return docs.filter(d => ['flagship','strategi','kode','divisi','tahun','periode','jenis'].every(k => !f[k] || d[k] === f[k]) && words.every(w => normalize([d.judul,d.url,d.flagship,d.strategi,d.kode,d.divisi,d.jenis,d.catatan,d.aktivitasJudul,d.periode,d.tahun].join(' ')).includes(w)));
+    return docs.filter(d => ['flagship','strategi','kode','divisi','tahun','jenis'].every(k => !f[k] || d[k] === f[k]) && (!f.status || (f.status==='approved'?approved(d):!approved(d))) && words.every(w => normalize([d.judul,d.url,d.flagship,d.strategi,d.kode,d.divisi,d.jenis,d.catatan,d.aktivitasJudul,d.periode,d.tahun].join(' ')).includes(w)));
   }
   const icons = {
     update: '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m10.5 2 3.5 3.5-8 8-4 1 1-4zM9 3.5 12.5 7" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>',
@@ -92,7 +102,7 @@
       tr.append(title);
       const flagship = node('td'); flagship.append(node('span', d.flagship || 'Lintas flagship', 'td-flag'), node('span', d.strategi ? 'Strategi '+d.strategi : 'Strategi umum', 'laporan-document-sub'), node('span', d.kode ? 'Aktivitas '+d.kode : 'Aktivitas umum', 'laporan-document-sub')); tr.append(flagship);
       tr.append(node('td', d.divisi), node('td', d.tahun + ' · ' + d.periode), node('td', d.jenis));
-      const preview = node('td'), button = node('button', 'Preview', 'tombol laporan-preview-button'); button.type = 'button'; button.setAttribute('aria-label','Preview ' + d.judul); button.addEventListener('click', () => showPreview(d)); preview.append(button); tr.append(preview);
+      const preview = node('td'), button = node('button', undefined, 'laporan-icon laporan-preview-button'); button.type = 'button'; button.title='Preview '+d.judul; button.setAttribute('aria-label','Preview ' + d.judul); button.innerHTML='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/></svg>'; button.addEventListener('click', () => showPreview(d)); preview.append(button); tr.append(preview);
       tr.tabIndex = 0;
       tr.setAttribute('aria-label', 'Lihat preview ' + d.judul);
       tr.addEventListener('click', event => {
@@ -120,12 +130,10 @@
     const selected = visible.find(d => d.id === selectedId) || visible[0];
     if (selected) showPreview(selected, false);
     else { selectedId = null; $('lap-preview-area').replaceChildren(node('p', 'Tidak ada dokumen untuk ditampilkan.', 'laporan-catatan')); $('lap-preview-detail').replaceChildren(); $('lap-preview-link').hidden = true; $('lap-preview-meta').textContent = ''; $('lap-preview-info').textContent = ''; }
-    screen.querySelectorAll('[data-period]').forEach(b => { const active = b.dataset.period === $('lap-periode').value; b.classList.toggle('is-active', active); b.setAttribute('aria-pressed', String(active)); });
   }
-  screen.querySelectorAll('[data-period]').forEach(b => b.addEventListener('click', () => { $('lap-periode').value = b.dataset.period; page = 1; render(); }));
-  ['flagship','strategi','kode','divisi','tahun','periode','jenis'].forEach(k => $('lap-'+k).addEventListener('change', () => { if (k === 'flagship') filterCodes(); page = 1; render(); }));
+  ['flagship','strategi','kode','divisi','tahun','jenis','status'].forEach(k => $('lap-'+k).addEventListener('change', () => { if (k === 'flagship') filterCodes(); page = 1; render(); }));
   $('lap-cari').addEventListener('input', () => { page = 1; render(); });
-  $('lap-reset').addEventListener('click', () => { ['flagship','strategi','kode','divisi','tahun','periode','jenis','cari'].forEach(k => $('lap-'+k).value=''); filterCodes(); page=1; render(); });
+  $('lap-reset').addEventListener('click', () => { ['flagship','strategi','kode','divisi','tahun','jenis','status','cari'].forEach(k => $('lap-'+k).value=''); filterCodes(); page=1; render(); });
   $('lap-sebelum').addEventListener('click',()=>{page--;render();}); $('lap-sesudah').addEventListener('click',()=>{page++;render();});
   function editorCodes(selected = '') { options($('doc-kode'), codes($('doc-flagship').value), 'Umum / Tanpa kode aktivitas', selected); editorActivities(); }
   function editorStrategy(selected = '') {
@@ -148,15 +156,11 @@
     editorStrategy(d?.strategi || $('lap-strategi').value);
     editorCodes(d?.kode || $('lap-kode').value);
     editorActivities(d?.aktivitas || '');
-    ['judul','url','divisi','tahun','periode','jenis','cover','catatan'].forEach(k => {
+    ['judul','url','divisi','tahun','jenis','cover','catatan'].forEach(k => {
       if (d) $('doc-'+k).value = d[k] || '';
       else if (['divisi','tahun','jenis'].includes(k) && $('lap-'+k).value) $('doc-'+k).value = $('lap-'+k).value;
     });
     if (!d && $('doc-jenis').value === 'Laporan kuartalan') $('doc-periode').value = 'Q1';
-    if (!d && $('lap-periode').value) {
-      $('doc-periode').value = $('lap-periode').value;
-      if (!$('lap-jenis').value && /^Q[1-4]$/.test($('lap-periode').value)) $('doc-jenis').value = 'Laporan kuartalan';
-    }
     $('lap-editor').showModal();
   }
 
