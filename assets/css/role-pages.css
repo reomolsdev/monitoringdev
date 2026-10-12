@@ -157,7 +157,71 @@ body.role-pages [hidden] { display:none !important; }
 .role-chat-dialog .role-dialog-head h2 { flex:1; }
 .role-chat-dialog .role-dialog-head .role-doc-status { flex-shrink:0; }
 .role-detail-title { font-size:17px; font-weight:600; line-height:1.5; }
-.role-detail-realization { font-size:14px; margin:0; }
+.role-detail-realization { font-size:15px; font-weight:600; margin:0; }
+.role-bod-review-dialog { width:min(720px,calc(100vw - 32px)); }
+.role-realization-heading { display:grid; gap:10px; }
+.role-realization-heading .role-detail-title { font-size:17px; font-weight:600; line-height:1.5; margin:0; }
+.role-realization-heading .role-detail-context { justify-self:start; margin:0; }
+.role-realization-heading .role-note { margin:0; }
+.role-manager-review-dialog { width:min(720px,calc(100vw - 32px)); }
+.role-manager-review-dialog .role-dialog-head { position:sticky; top:0; z-index:1; background:var(--putih); flex-wrap:wrap; }
+.role-manager-submitted { display:grid; gap:14px; padding:20px; border:1px solid var(--garis); border-radius:var(--r-kecil); background:#f7f9fb; }
+.role-manager-submitted .role-chat-summary { padding-bottom:0; border-bottom:0; display:grid; gap:8px; }
+.role-manager-submitted .role-note { margin:0; }
+.role-manager-submitted .role-detail-actual-row { grid-template-columns:1fr 1fr; }
+.role-manager-submitted .role-field input { height:40px; }
+.role-manager-submitted input[readonly] { background:#edf1f5; }
+.role-manager-submitted .role-detail-context { justify-self:start; margin:0; }
+.role-manager-composer { display:grid; gap:12px; }
+.role-manager-composer .role-note { margin:0; }
+.role-manager-review-dialog .role-chat-feed { max-height:240px; overscroll-behavior:contain; }
+.role-manager-review-dialog .role-chat-message { border:1px solid var(--garis); background:#fafbfd; padding:14px; margin-bottom:6px; }
+@media(max-width:500px) {
+ .role-manager-submitted .role-detail-actual-row { grid-template-columns:1fr; }
+ .role-manager-submitted { padding:15px; }
+ .role-manager-review-dialog .role-dialog-head { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; }
+ .role-manager-review-dialog .role-dialog-head h2 { grid-column:1; grid-row:1; }
+ .role-manager-review-dialog .role-dialog-head .role-close { grid-column:2; grid-row:1; }
+ .role-manager-review-dialog .role-dialog-head .role-doc-status { grid-column:1 / -1; grid-row:2; justify-self:start; }
+}
+.role-bod-review-dialog .role-dialog-head { position:sticky; top:0; z-index:1; background:var(--putih); }
+.role-bod-submitted { display:grid; gap:14px; background:#f7f9fb; border:1px solid var(--garis); border-radius:var(--r-kecil); padding:20px; }
+.role-bod-submitted h3,.role-bod-history h3 { margin:0; font-size:15px; font-weight:600; }
+.role-bod-label { font-size:12px; color:var(--teks-redup); margin:0; }
+.role-bod-subtitle { font-size:15px; font-weight:600; margin:-6px 0 0; line-height:1.5; }
+.role-bod-value-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.role-bod-submitted input[readonly] { background:#edf1f5; border-color:#dde3e9; color:var(--teks); height:40px; cursor:default; }
+.role-bod-document-list { display:grid; gap:12px; }
+.role-bod-document-row { position:relative; }
+.role-bod-document-row input { padding-right:44px; }
+.role-bod-document-row input.role-bod-clickable-url { cursor:pointer; color:var(--biru); }
+.role-bod-open-document { position:absolute; right:8px; bottom:4px; display:grid; place-items:center; width:32px; height:32px; color:var(--biru); text-decoration:none; border-radius:4px; }
+.role-bod-open-document:hover,.role-bod-open-document:focus-visible { background:#e0eaf6; }
+.role-bod-decision { height:42px; font-weight:600; }
+.role-bod-decision[data-decision="Accept"],.role-bod-history-status[data-decision="Accept"] { color:#216943; background:#eff8f2; border-color:#b8dbc6; }
+.role-bod-decision[data-decision="Reject"],.role-bod-history-status[data-decision="Reject"] { color:#a12c36; background:#fff1f2; border-color:#edc2c6; }
+.role-bod-decision[data-decision="Revisi"],.role-bod-history-status[data-decision="Revisi"] { color:#94620c; background:#fff8e7; border-color:#e8d39c; }
+.role-bod-decision-hint { margin:0; }
+.role-bod-submit-actions { display:flex; justify-content:flex-end; }
+.role-bod-history { display:grid; gap:14px; border-top:1px solid var(--garis); padding-top:20px; margin-top:4px; }
+.role-bod-history-list { display:grid; gap:10px; max-height:240px; overflow:auto; overscroll-behavior:contain; }
+.role-bod-history-entry { padding:14px; border:1px solid var(--garis); border-radius:var(--r-kecil); background:#fafbfd; }
+.role-bod-history-head { display:flex; align-items:center; flex-wrap:wrap; gap:8px; font-size:12px; }
+.role-bod-history-status { margin-left:auto; padding:3px 8px; border:1px solid var(--garis); border-radius:5px; font-size:11px; color:var(--teks-redup); }
+.role-bod-history-text { margin:8px 0; font-size:13px; line-height:1.5; white-space:pre-wrap; overflow-wrap:anywhere; }
+@media(max-width:500px) { .role-bod-value-row { grid-template-columns:1fr; } .role-bod-submitted { padding:15px; } }
+.role-detail-context { display:inline-block; font-size:13px; font-weight:600; color:var(--biru); background:#e8f1fb; border-radius:6px; padding:6px 10px; margin-top:8px; }
+.role-detail-actual-row { display:grid; grid-template-columns:2fr 1fr; gap:12px; }
+.role-detail-actual-row input[readonly] { background:#f5f7fa; }
+.role-detail-percent-field { position:relative; }
+.role-detail-percent-field input { padding-right:34px; }
+.role-detail-percent-mark { position:absolute; right:12px; bottom:10px; color:var(--teks-redup); }
+.role-detail-links-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.role-detail-links-head h3 { margin:0; }
+.role-detail-links-head .role-detail-add { flex-shrink:0; }
+.role-chat-message { padding-right:10px; }
+.role-detail-legacy-note { white-space:pre-wrap; overflow-wrap:anywhere; padding:10px; color:var(--teks-redup); font-size:13px; }
+@media(max-width:500px) { .role-detail-actual-row { grid-template-columns:1fr; } }
 .role-activity-review-indicator { display:inline-flex; align-items:center; margin-top:7px; }
 .role-activity-review-indicator svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .role-review-pending { color:#1967b3; }
