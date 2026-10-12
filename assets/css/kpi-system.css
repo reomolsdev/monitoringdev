@@ -19,6 +19,22 @@
 .role-kpi-approval-effect { font-size:12px; line-height:1.6; background:#f3f7fc; padding:10px 12px; border-radius:6px; }
 #layar-kpi .kk-rumus .role-link { color:inherit; text-align:left; line-height:1.6; font-weight:400; }
 #layar-kpi .kk-realisasi { font-variant-numeric:tabular-nums; }
+#layar-kpi .tabel-kpi { min-width:1280px; }
+#layar-kpi .kk-kat { width:80px; }
+#layar-kpi .kk-prog { width:155px; }
+#layar-kpi .kk-year { width:88px; text-align:right; font-variant-numeric:tabular-nums; }
+#layar-kpi .kk-year .urut-tombol { justify-content:flex-end; }
+#layar-kpi td.kk-year { font-size:12px; line-height:1.6; }
+#layar-kpi .kk-year.is-selected-year { background:#f0f6fd; }
+.kpi-row-toggle { display:flex; align-items:center; gap:8px; margin-top:12px; min-height:28px; }
+.kpi-row-toggle .role-subtask-arrow { margin-right:6px; }
+#layar-kpi .kpi-collapsed-row[hidden] { display:none; }
+#layar-kpi .kpi-collapsed-row > td { padding:18px 24px; background:var(--netral-latar,#f6f8fa); }
+.kpi-row-detail { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:24px; }
+.kpi-row-detail-item { display:grid; align-content:start; gap:6px; }
+.kpi-row-detail-label { color:var(--teks-redup,#60758b); font-size:12px; }
+.kpi-row-detail .kpi-target-line { justify-content:flex-start; font-weight:500; }
+.kpi-row-detail-value { font-weight:500; min-height:28px; display:flex; align-items:center; }
 .kpi-target-line { display:flex; justify-content:flex-end; align-items:center; gap:8px; min-height:28px; }
 .kpi-target-line .kpi-target-edit { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; padding:0; flex-shrink:0; font-size:18px; }
 .kpi-editor-dialog .role-field textarea { min-height:65px; }
