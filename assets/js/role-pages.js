@@ -40,7 +40,7 @@
 
  const dialog=node('dialog',undefined,'role-dialog');dialog.id='role-popup';dialog.setAttribute('aria-labelledby','role-popup-title');document.body.append(dialog);
 
- function popup(title){dialog.classList.remove('role-upload-dialog','role-approval-dialog','role-chat-dialog','role-bod-review-dialog','role-manager-review-dialog','role-editor-dialog','role-flagship-dialog','kpi-editor-dialog');dialog.replaceChildren();const head=node('div',undefined,'role-dialog-head'),h=node('h2',title);h.id='role-popup-title';const close=button('×',()=>dialog.close());close.className='role-close';close.setAttribute('aria-label','Tutup popup');head.append(h,close);const form=node('form',undefined,'role-dialog-body');form.onsubmit=e=>e.preventDefault();dialog.append(head,form);dialog.showModal();return form;}
+ function popup(title){dialog.classList.remove('role-upload-dialog','role-approval-dialog','role-chat-dialog','role-bod-review-dialog','role-manager-review-dialog','role-editor-dialog','role-flagship-dialog','role-flagship-delete-dialog','role-flagship-list-dialog','role-flagship-edit-dialog','kpi-editor-dialog');dialog.replaceChildren();const head=node('div',undefined,'role-dialog-head'),h=node('h2',title);h.id='role-popup-title';const close=button('×',()=>dialog.close());close.className='role-close';close.setAttribute('aria-label','Tutup popup');head.append(h,close);const form=node('form',undefined,'role-dialog-body');form.onsubmit=e=>e.preventDefault();dialog.append(head,form);dialog.showModal();return form;}
 
  function field(form,label,value='',options=null,kind='text',required=true){const wrap=node('div',undefined,'role-field'),caption=node('label',label);wrap.append(caption);const input=node(options?'select':kind==='textarea'?'textarea':'input');if(options){options.forEach(v=>input.add(new Option(typeof v==='string'?v:v.label,typeof v==='string'?v:v.value)));}else if(kind!=='textarea')input.type=kind;input.id='role-field-'+crypto.randomUUID();caption.htmlFor=input.id;input.value=value;input.required=required;wrap.append(input);form.append(wrap);return input;}
 
@@ -51,7 +51,9 @@
  const partners=['Universitas Terbuka','Politeknik Negeri Bandung','Dinas Pendidikan Jawa Barat'];
  const strategy={AILOS:'ST3',PROGRES:'ST1',ADCEND:'ST1','R-MODE':'WT2',FLEXERA:'WT3',CREATE:'WT3',CODEA:'WT3',NEXEL:'WT3',COALA:'WO2'};
 
- let programs=read('seamolec-role-flagships-v1',flags.map(name=>({name,division: name==='AILOS'?'IT&KM':name==='COALA'?'R&D':['FLEXERA','CREATE','CODEA','NEXEL'].includes(name)?'Training':'CPMP'})));
+ const storedPrograms=read('seamolec-role-flagships-v1',flags.map(name=>({name,division: name==='AILOS'?'IT&KM':name==='COALA'?'R&D':['FLEXERA','CREATE','CODEA','NEXEL'].includes(name)?'Training':'CPMP'})));
+ let programs=storedPrograms.filter(p=>!p.deleted),deletedPrograms=storedPrograms.filter(p=>p.deleted);
+ const deletedCodes=new Set(deletedPrograms.map(p=>p.name));flags.splice(0,flags.length,...flags.filter(name=>!deletedCodes.has(name)));
 
  // Custom flagship codes share the same catalog across role routes and KPI.
  programs.forEach(p=>{if(!flags.includes(p.name))flags.push(p.name);strategy[p.name]=p.strategy||strategy[p.name]||'';});
@@ -59,33 +61,68 @@
  refreshFlagshipChoices();
  function manageFlags(){
   if(role!=='bod')return;
-  const form=popup('Kelola flagship');dialog.classList.add('role-flagship-dialog');
-  const intro=node('p','Pilih flagship untuk mengatur, atau tambahkan flagship baru.','role-note');form.append(intro);
-  const layout=node('div',undefined,'role-flagship-layout'),sidebar=node('aside',undefined,'role-flagship-sidebar'),editor=node('section',undefined,'role-flagship-editor');form.append(layout);layout.append(sidebar,editor);
-  let selected=programs[0]?.name||null;
-  function drawList(){sidebar.replaceChildren();const add=button('+ Tambah flagship',()=>{selected=null;drawList();drawEditor();},true);add.classList.add('role-flagship-add');sidebar.append(add);const list=node('div',undefined,'role-flagship-list');list.setAttribute('aria-label','Daftar flagship');sidebar.append(list);
-   programs.forEach(p=>{const item=button('',()=>{selected=p.name;drawList();drawEditor();});item.className='role-flagship-item'+(selected===p.name?' is-selected':'');item.setAttribute('aria-pressed',String(selected===p.name));item.append(node('strong',p.name),node('span',p.fullName||p.division),node('small',p.strategy||strategy[p.name]||'Belum dipetakan'));list.append(item);});
+  const KEY='seamolec-role-flagships-v1';let records=[...programs,...deletedPrograms];
+  const active=()=>records.filter(p=>!p.deleted);
+  function persist(next,error){
+   if(!save(KEY,next)){error.textContent='Perubahan gagal disimpan. Silakan coba lagi.';return false;}
+   records=next;programs=active();deletedPrograms=records.filter(p=>p.deleted);
+   flags.splice(0,flags.length,...programs.map(p=>p.name));programs.forEach(p=>{strategy[p.name]=p.strategy||strategy[p.name]||'';});
+   refreshFlagshipChoices();window.renderRolePage?.();return true;
   }
-  function drawEditor(){editor.replaceChildren();const current=programs.find(p=>p.name===selected),isNew=!current;editor.append(node('h3',isNew?'Tambah flagship':'Pengaturan '+current.name));
-   const code=field(editor,'Kode flagship',current?.name||'');code.placeholder='Contoh: DIGITAL';code.maxLength=24;code.readOnly=!isNew;code.oninput=()=>{code.value=code.value.toUpperCase().replace(/\s+/g,'-');};
-   const name=field(editor,'Nama flagship',current?.fullName||current?.name||'');name.placeholder='Contoh: Digital Learning Partnership';
-   const row=node('div',undefined,'role-editor-row');editor.append(row);const div=field(row,'Divisi pelaksana',current?.division||'IT&KM',['IT&KM','CPMP','Training','R&D','Admin & Finance']),strat=field(row,'Kode strategi',current?.strategy||strategy[current?.name]||'ST3',['ST1','ST3','WT2','WT3','WO2']);
-   const components=current?.components||window.activityProgramComponents?.(current?.name)||[];const component=field(editor,'Program / komponen awal',components[0]||'',null,'text',isNew);component.placeholder='Contoh: Pelatihan pembelajaran digital';
-   editor.append(node('p',isNew?'Program awal langsung tersedia pada dropdown Tambah aktivitas.':'Kode tetap agar aktivitas yang sudah terkait tidak terputus.','role-editor-hint'));
-   const error=node('p','','role-error');error.setAttribute('role','alert');const bar=node('div',undefined,'role-dialog-actions');editor.append(error,bar);
-   bar.append(button('Batal',()=>dialog.close()),button(isNew?'Tambah flagship':'Simpan perubahan',()=>{
-    if(role!=='bod')return;if(![code,name,div,strat,component].every(input=>input.reportValidity()))return;
-    const key=code.value.trim().toUpperCase(),fullName=name.value.trim(),first=component.value.trim();
-    if(!/^[A-Z][A-Z0-9-]{1,23}$/.test(key)){error.textContent='Kode berisi 2–24 karakter: huruf, angka, atau tanda hubung, diawali huruf.';code.focus();return;}
-    if(!fullName||(isNew&&!first)){error.textContent='Isi nama flagship dan program awal.';return;}
-    if(isNew&&programs.some(p=>p.name.toUpperCase()===key)){error.textContent='Kode flagship sudah digunakan. Pilih kode lain.';code.focus();return;}
-    const nextRecord=audit({...current,name:key,fullName,division:div.value,strategy:strat.value,components:[...new Set([...(current?.components||components),...(first?[first]:[])])],createdAt:current?.createdAt||new Date().toISOString()},isNew?'Menambah flagship':'Mengatur flagship');
-    const next=isNew?[...programs,nextRecord]:programs.map(p=>p.name===selected?nextRecord:p);if(!save('seamolec-role-flagships-v1',next))return;
-    programs=next;if(!flags.includes(key))flags.push(key);strategy[key]=strat.value;refreshFlagshipChoices();window.renderRolePage?.();selected=key;drawList();drawEditor();notice.textContent=isNew?'Flagship '+key+' ditambahkan dan siap digunakan.':'Pengaturan flagship '+key+' disimpan.';
-    const success=node('p',isNew?'Flagship berhasil ditambahkan.':'Perubahan berhasil disimpan.','role-flagship-success');success.setAttribute('role','status');editor.prepend(success);
+  function flagshipDialog(title,kind){const f=popup(title),d=f.closest('dialog');d.classList.remove('role-flagship-list-dialog','role-flagship-edit-dialog');d.classList.add(kind);return f;}
+  const message=(text)=>node('p',text,'role-note');
+  function errorField(form){const e=node('p','','role-error');e.setAttribute('role','alert');form.append(e);return e;}
+  function row(form){const r=node('div',undefined,'role-editor-row');form.append(r);return r;}
+  function actionIcon(kind,label,fn){const b=button('',fn);b.className='role-icon'+(kind==='delete'?' role-danger':'');b.title=label;b.setAttribute('aria-label',label);const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d',kind==='edit'?'M15 5l4 4M4 20l4-1L20 7l-4-4L4 15v5Z':'M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7');svg.append(path);b.append(svg);return b;}
+  function list(success=''){
+   if(role!=='bod')return;const form=flagshipDialog('Kelola flagship','role-flagship-list-dialog');
+   form.append(message('Pilih tindakan pada daftar. Tambah flagship dan ubah nama memakai formulir yang terpisah.'));
+   if(success){const info=node('p',success,'role-flagship-success');info.setAttribute('role','status');form.append(info);}
+   const tools=node('div',undefined,'role-flagship-toolbar');tools.append(node('span',active().length+' flagship','role-flagship-count'),button('+ Tambah flagship',add,true));form.append(tools);
+   const search=field(form,'Cari flagship','',null,'search',false);search.placeholder='Cari kode, nama, atau divisi...';
+   const wrap=node('div',undefined,'role-flagship-table-wrap'),table=node('table',undefined,'role-flagship-table'),head=node('thead'),headRow=node('tr'),body=node('tbody');
+   ['Kode','Nama flagship','Divisi','Strategi','Aksi'].forEach(label=>{const th=node('th',label);th.scope='col';headRow.append(th);});head.append(headRow);table.append(head,body);wrap.append(table);form.append(wrap);
+   function draw(){body.replaceChildren();const term=search.value.trim().toLowerCase(),matches=active().filter(p=>[p.name,p.fullName,p.division,p.strategy].join(' ').toLowerCase().includes(term));
+    matches.forEach(p=>{const tr=node('tr');tr.dataset.flagship=p.name;tr.append(node('td',p.name,'role-flagship-code'),node('td',p.fullName||p.name),node('td',p.division),node('td',p.strategy||strategy[p.name]||'—'));
+     const actions=node('td'),group=node('div',undefined,'role-actions-group');group.append(actionIcon('edit','Ubah nama '+p.name,()=>rename(p)),actionIcon('delete','Hapus flagship '+p.name,()=>remove(p)));actions.append(group);tr.append(actions);body.append(tr);
+    });if(!matches.length){const tr=node('tr'),td=node('td',term?'Tidak ada flagship yang cocok.':'Belum ada flagship. Klik Tambah flagship untuk mulai.','role-flagship-empty');td.colSpan=5;tr.append(td);body.append(tr);}}
+   search.oninput=draw;search.onsearch=draw;draw();
+   form.append(message('Hanya nama flagship yang dapat diubah. Kode, divisi, strategi, dan program / komponen tetap.'));
+   const actions=node('div',undefined,'role-dialog-actions');actions.append(button('Tutup',()=>form.closest('dialog').close()));form.append(actions);
+  }
+  function add(){
+   if(role!=='bod')return;const form=flagshipDialog('Tambah flagship','role-flagship-edit-dialog');
+   form.append(message('Buat flagship baru. Periksa semua data sebelum menyimpan; setelah dibuat, hanya namanya yang dapat diubah.'));
+   const first=row(form),code=field(first,'Kode flagship',''),name=field(first,'Nama flagship','');code.placeholder='Contoh: DIGITAL';code.maxLength=24;code.oninput=()=>{code.value=code.value.toUpperCase().replace(/\s+/g,'-');};name.placeholder='Nama lengkap flagship';
+   const second=row(form),division=field(second,'Divisi pelaksana','IT&KM',['IT&KM','CPMP','Training','R&D','Admin & Finance']),strategy=field(second,'Kode strategi','ST3',['ST1','ST3','WT2','WT3','WO2']);
+   const component=field(form,'Program / komponen awal','');component.placeholder='Contoh: Pelatihan pembelajaran digital';
+   const error=errorField(form),actions=node('div',undefined,'role-dialog-actions');form.append(actions);actions.append(button('Batal',()=>list()),button('Tambah flagship',()=>{
+    if(role!=='bod'||!form.reportValidity())return;const key=code.value.trim(),fullName=name.value.trim(),first=component.value.trim();
+    if(!/^[A-Z][A-Z0-9-]{1,23}$/.test(key)){error.textContent='Kode harus 2–24 karakter, diawali huruf, dan hanya memakai huruf, angka atau tanda hubung.';return;}
+    if(!fullName||!first){error.textContent='Isi nama flagship dan program / komponen awal.';return;}
+    if(active().some(p=>p.name===key)){error.textContent='Kode flagship sudah digunakan. Pilih kode lain.';return;}
+    const item=audit({name:key,fullName,division:division.value,strategy:strategy.value,components:[first],createdAt:new Date().toISOString(),createdBy:identity()},'Menambah flagship');
+    if(persist([...records.filter(p=>p.name!==key),item],error))list('Flagship '+key+' berhasil ditambahkan.');
    },true));
   }
-  drawList();drawEditor();
+  function rename(p){
+   if(role!=='bod')return;const form=flagshipDialog('Ubah nama flagship','role-flagship-edit-dialog');
+   const summary=node('div',undefined,'role-flagship-locked-summary');summary.append(node('strong',p.name),node('span',(p.division||'—')+' · '+(p.strategy||strategy[p.name]||'—')),node('small','Kode, divisi, strategi, dan program / komponen tidak berubah.'));form.append(summary);
+   const name=field(form,'Nama flagship',p.fullName||p.name),error=errorField(form),actions=node('div',undefined,'role-dialog-actions');form.append(actions);
+   actions.append(button('Batal',()=>list()),button('Simpan nama',()=>{if(role!=='bod'||!form.reportValidity())return;if(!name.value.trim()){error.textContent='Isi nama flagship.';return;}
+    if(persist(records.map(r=>r.name===p.name&&!r.deleted?audit({...r,fullName:name.value.trim(),updatedAt:new Date().toISOString(),updatedBy:identity()},'Mengubah nama flagship'):r),error))list('Nama flagship '+p.name+' berhasil diperbarui.');
+   },true));
+  }
+  function remove(p){
+   if(role!=='bod')return;const form=flagshipDialog('Hapus flagship?','role-flagship-edit-dialog'),phrase='Saya Menghapus Ini dengan Sadar';
+   form.append(node('strong',p.name+' · '+(p.fullName||p.name)),message('Flagship dihapus dari daftar pilihan. Aktivitas, KPI, dan dokumen yang sudah terkait tetap tersimpan.'));
+   const instruction=node('p','Untuk melanjutkan, ketik persis:','role-delete-instruction');instruction.append(node('strong',phrase));form.append(instruction);
+   const confirmation=field(form,'Kalimat konfirmasi','');confirmation.placeholder=phrase;confirmation.autocomplete='off';confirmation.spellcheck=false;
+   const error=errorField(form),actions=node('div',undefined,'role-dialog-actions'),submit=button('Hapus flagship',()=>{if(role!=='bod'||confirmation.value.trim()!==phrase)return;
+    if(persist(records.map(r=>r.name===p.name?audit({...r,deleted:true,deletedAt:new Date().toISOString(),deletedBy:identity()},'Menghapus flagship'):r),error))list('Flagship '+p.name+' berhasil dihapus.');
+   });submit.classList.add('role-danger-fill');submit.disabled=true;confirmation.oninput=()=>{submit.disabled=confirmation.value.trim()!==phrase;};actions.append(button('Batal',()=>list()),submit);form.append(actions);
+  }
+  list();
  }
 
  const docsKey='seamolec-report-documents-v1';

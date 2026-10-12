@@ -244,22 +244,29 @@ body.role-pages [hidden] { display:none !important; }
 .role-pages .td-kosong>.role-icon { margin-top:5px; }
 .role-editor-dialog .role-dialog-actions { padding-top:12px; }
 .role-editor-dialog .role-error:empty { display:none; }
-.role-flagship-dialog { width:min(850px,calc(100vw - 32px)); }
-.role-flagship-dialog .role-dialog-body { gap:16px; }
-.role-flagship-dialog .role-dialog-body>.role-note { margin:0; }
-.role-flagship-layout { display:grid; grid-template-columns:210px minmax(0,1fr); gap:24px; align-items:start; }
-.role-flagship-sidebar { display:grid; gap:12px; }
-.role-flagship-add { width:100%; }
-.role-flagship-list { display:grid; gap:6px; max-height:380px; overflow:auto; }
-.role-flagship-item { display:grid; gap:4px; width:100%; padding:12px; border:1px solid var(--garis); border-radius:7px; background:white; color:var(--teks); text-align:left; font:inherit; cursor:pointer; }
-.role-flagship-item strong { font-size:12px; font-weight:600; }
-.role-flagship-item span,.role-flagship-item small { font-size:11px; color:var(--teks-redup); }
-.role-flagship-item.is-selected { border-color:var(--biru); background:#f2f7fd; }
-.role-flagship-editor { display:grid; gap:13px; min-width:0; }
-.role-flagship-editor h3 { font-size:16px; font-weight:600; }
 .role-flagship-success { font-size:12px; color:#247340; background:#eaf6ee; border-radius:6px; padding:10px; }
-.role-flagship-editor .role-error:empty { display:none; }
-@media(max-width:650px) { .role-flagship-layout { grid-template-columns:1fr; } .role-flagship-list { max-height:140px; } }
+.role-delete-instruction { margin:0; font-size:13px; }
+.role-delete-instruction strong { display:block; margin-top:8px; }
+/* Separate list, create, rename and delete flagship dialogs. */
+.role-flagship-list-dialog { width:min(900px,calc(100vw - 32px)); }
+.role-flagship-edit-dialog { width:min(620px,calc(100vw - 32px)); }
+.role-pages .role-flagship-list-dialog .role-note,
+.role-pages .role-flagship-edit-dialog .role-note { margin:0; }
+.role-pages .role-flagship-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.role-flagship-count { font-size:13px; color:var(--teks-redup); }
+.role-flagship-table-wrap { overflow:auto; border:1px solid var(--garis); border-radius:8px; }
+.role-flagship-table { width:100%; min-width:610px; border-collapse:collapse; font-size:13px; }
+.role-flagship-table th { text-align:left; font-size:12px; font-weight:500; color:var(--teks-redup); background:var(--netral-latar); padding:13px 16px; }
+.role-flagship-table td { padding:10px 16px; border-top:1px solid var(--garis); vertical-align:middle; }
+.role-flagship-table th:last-child,.role-flagship-table td:last-child { width:100px; }
+.role-flagship-code { color:var(--biru); font-weight:500; }
+.role-flagship-empty { color:var(--teks-redup); text-align:center; }
+.role-flagship-locked-summary { display:grid; gap:8px; padding:14px; background:var(--netral-latar); border:1px solid var(--garis); border-radius:8px; }
+.role-flagship-locked-summary span,.role-flagship-locked-summary small { color:var(--teks-redup); font-size:12px; }
+.role-flagship-list-dialog .role-error:empty,.role-flagship-edit-dialog .role-error:empty { display:none; }
+.role-flagship-edit-dialog .role-danger-fill:disabled { opacity:.45; cursor:not-allowed; }
+@media(max-width:600px) { .role-flagship-edit-dialog .role-editor-row { grid-template-columns:1fr; } }
+
 @media(max-width:560px) { .role-editor-row,.role-editor-title-row { grid-template-columns:1fr; } }
 @media(max-width:500px) { .role-chat-dialog .role-dialog-head { flex-wrap:wrap; } }
 .role-detail-comments-title { border-top:1px solid var(--garis); padding-top:18px; }

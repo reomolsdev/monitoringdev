@@ -76,34 +76,13 @@
   });
   s.history.push({...actor,time:new Date().toISOString(),action:'Aktivitas '+d.code+': '+status+(fulfills?' · memenuhi '+k?.code:' · belum menambah hasil KPI')});return {state:s};
  }
- // Work weights are independent of approved KPI outcomes. Store hundredths of a percent to avoid rounding drift.
- function weightedActivities(s,k,year,items){return items.filter(a=>!a.deleted&&String(a.year||'2026')===String(year)&&k.flags.includes(a.flag)&&(a.kpiId?a.kpiId===k.id:s.outcomes.some(o=>o.kpiId===k.id&&o.activityIds?.includes(a.id))));}
- function workProgress(s,k,year,items){
-  const tasks=weightedActivities(s,k,year,items),plan=k.weightPlans?.[year],weights=plan?.weights||{},ids=tasks.map(a=>a.id),savedIds=Object.keys(weights);
-  const values=ids.map(id=>weights[id]),validValues=values.every(v=>Number.isInteger(v)&&v>=0&&v<=10000),total=values.reduce((sum,v)=>sum+(Number.isFinite(v)?v:0),0);
-  const valid=Boolean(plan&&tasks.length&&ids.length===savedIds.length&&savedIds.every(id=>ids.includes(id))&&validValues&&total===10000);
-  const earned=valid?tasks.reduce((sum,a)=>sum+(a.status==='Selesai'?weights[a.id]:0),0):null;
-  return {tasks,plan,valid,total:total/100,progress:earned==null?null:earned/100,completed:tasks.filter(a=>a.status==='Selesai').length,reason:!tasks.length?'Belum ada aktivitas terkait pada tahun ini.':!plan?'Bobot belum ditetapkan BOD.':!valid?'Daftar aktivitas berubah atau total bobot tidak 100%. BOD perlu menetapkan ulang bobot.':''};
- }
- function setWorkWeights(state,kpiId,year,values,items,actor){
-  if(actor?.role!=='BOD')return {error:'Hanya BOD yang dapat menetapkan bobot.'};
-  const s=JSON.parse(JSON.stringify(state)),k=s.kpis.find(k=>k.id===kpiId);if(!k||!YEARS.includes(String(year)))return {error:'KPI atau tahun tidak valid.'};
-  const tasks=weightedActivities(s,k,year,items),ids=tasks.map(a=>a.id),keys=Object.keys(values);
-  if(!tasks.length||keys.length!==ids.length||keys.some(id=>!ids.includes(id)))return {error:'Daftar aktivitas berubah. Buka ulang pengaturan bobot.'};
-  const weights={};for(const id of ids){const raw=values[id],v=Number(raw),scaled=v*100;if(raw==null||String(raw).trim()===''||!Number.isFinite(v)||v<0||v>100||Math.abs(scaled-Math.round(scaled))>1e-7)return {error:'Isi bobot 0–100%, maksimal dua angka desimal.'};weights[id]=Math.round(scaled);}
-  if(Object.values(weights).reduce((sum,v)=>sum+v,0)!==10000)return {error:'Total bobot harus tepat 100%. Gunakan 0% untuk aktivitas yang tidak diberi bobot.'};
-  k.weightPlans={...k.weightPlans,[year]:{weights,setBy:actor.name,setAt:new Date().toISOString()}};s.history.push({...actor,time:new Date().toISOString(),action:'Menetapkan bobot aktivitas '+k.code+' '+year});return {state:s};
- }
- window.KPISystem={KEY,YEARS,COUNTRIES,canonical,load,persist,calculate,measurement,validOutcome,planResult,activityResult,weightedActivities,workProgress,setWorkWeights};
+ window.KPISystem={KEY,YEARS,COUNTRIES,canonical,load,persist,calculate,measurement,validOutcome,planResult,activityResult};
  window.mountKPI=function(c){
   const {screen,$,node,button,link,badge,field,popup,actions,roleButtons,notice,csv,manageFlags,identity,safeURL}=c;
   const role=()=>c.role();let s=load(),year='2026',flag='';const expanded=new Set();
   const num=v=>v==null?'—':new Intl.NumberFormat('id-ID',{maximumFractionDigits:2}).format(v);
   const actor=()=>({...identity(),time:new Date().toISOString()});
   function write(action){s.history.push({...actor(),action});if(!persist(s)){s=load();notice.textContent='Perubahan gagal disimpan di browser.';return false;}render();return true;}
-  const activities=()=>Object.values(c.read('seamolec-role-activities-v1',{})).filter(a=>!a.deleted);
-  function compatible(a,k){return k.flags.includes(a.flag);}
-  function linked(k){return activities().filter(a=>a.kpiId===k.id||s.outcomes.some(o=>o.kpiId===k.id&&o.activityIds.includes(a.id)));}
   const format=(k,v)=>num(v)+(k.method==='count'?'':'%');
   const withUnit=(k,v)=>v==null?'—':k.method==='count'?num(v)+' '+k.unit:num(v)+'%'+(k.unit.replace(/^\s*%\s*/,'')?' '+k.unit.replace(/^\s*%\s*/,''):'');
   function edit(k=null){if(role()!=='bod')return;const f=popup(k?'Ubah KPI':'Tambah KPI');f.classList.add('kpi-editor-form');f.parentElement?.classList.add('role-editor-dialog','kpi-editor-dialog');
@@ -127,35 +106,28 @@
    const sync=()=>{k=s.kpis.find(k=>k.id===sel.value);inputs.forEach((n,i)=>{n.value=k.annual[YEARS[i]]??(i===4?k.target:'');n.min=0;n.max=k.target;n.step=k.method==='count'?'1':'any';});};sel.onchange=sync;sync();f.append(node('p','Target kumulatif: target 2027 sudah mencakup hasil 2025–2026. Angka contoh belum merupakan penetapan BOD.','role-note'));
    actions(f,'Tetapkan target',error=>{const values=inputs.map(n=>Number(n.value));if(!note.value.trim()||values.some((v,i)=>v<0||v>k.target||(k.method==='count'&&!Number.isInteger(v))||(i&&v<values[i-1]))||values[4]!==k.target){error.textContent='Isi catatan; target harus meningkat / tetap, berupa bilangan bulat untuk satuan, dan 2029 sama dengan target akhir.';return false;}k.annual=Object.fromEntries(YEARS.map((y,i)=>[y,values[i]]));k.annualConfirmed=true;k.annualNote=note.value.trim();return write('Target tahunan '+k.code+': '+note.value.trim());},['bod']);
   }
-  function dialogClose(){document.getElementById('role-popup').close();}
-  function correct(k){if(role()!=='bod')return;const f=popup('Koreksi manual · '+k.code),v=field(f,'Realisasi kumulatif '+year,k.overrides?.[year]?.value??calculate(s,k,year).actual??0,null,'number'),reason=field(f,'Alasan koreksi','',null,'textarea');v.min=0;v.step=k.method==='count'?'1':'any';f.append(node('p','Koreksi menggantikan angka otomatis pada tahun ini; tidak ditambahkan ke hasil otomatis. Hasil otomatis tetap tersimpan.','role-note'));if(k.legacyActual!=null)f.append(node('p','Angka lama tersimpan: '+k.legacyActual+'. Belum diperlakukan sebagai hasil tervalidasi.','role-note'));if(k.overrides?.[year])f.append(button('Gunakan perhitungan otomatis lagi',()=>{if(role()!=='bod')return;delete k.overrides[year];if(write('Menghapus koreksi '+k.code+' '+year))dialogClose();}));
-   actions(f,'Simpan koreksi',error=>{const value=Number(v.value);if(!reason.value.trim()||(k.method==='count'&&!Number.isInteger(value))){error.textContent='Isi alasan dan gunakan bilangan bulat untuk satuan.';return false;}k.overrides={...k.overrides,[year]:{value,reason:reason.value.trim(),...actor()}};return write('Koreksi '+k.code+' '+year+': '+reason.value.trim());},['bod']);
-  }
-  function weightsEditor(k){
-   if(role()!=='bod')return;const f=popup('Atur bobot aktivitas · '+k.code),yearField=field(f,'Tahun bobot',year,YEARS),list=node('div',undefined,'kpi-weight-list'),total=node('p','','kpi-weight-total');total.setAttribute('role','status');f.append(node('p','Bobot menunjukkan bagian pekerjaan tiap aktivitas. Total per KPI dan tahun harus 100%. Aktivitas Selesai menyumbang seluruh bobotnya; status lain menyumbang 0%. Bobot tidak menambah negara / proyek atau mengubah capaian KPI.','role-note'),list,total);let inputs=[];
-   const updateTotal=()=>{const amount=inputs.reduce((sum,{input})=>sum+Math.round((Number(input.value)||0)*100),0)/100;total.textContent='Total bobot: '+num(amount)+'% / 100%';total.classList.toggle('is-valid',amount===100);};
-   const draw=()=>{s=load();k=s.kpis.find(x=>x.id===k.id);list.replaceChildren();inputs=[];const work=workProgress(s,k,yearField.value,activities());if(!work.tasks.length)list.append(node('p','Belum ada aktivitas terkait. Manager / Staf dapat memilih KPI ini saat menambah atau mengedit aktivitas.','role-note'));work.tasks.forEach(a=>{const row=node('div',undefined,'kpi-weight-row'),info=node('div',undefined,'kpi-weight-info');info.append(node('strong',a.code+' · '+a.title),node('small',a.flag+' · '+a.division),badge(a.status));row.append(info);const input=field(row,'Bobot '+a.code,(work.plan?.weights[a.id]??0)/100,null,'number');input.min='0';input.max='100';input.step='0.01';input.setAttribute('aria-label','Bobot '+a.code+' · '+a.title+' (%)');const wrap=node('div',undefined,'kpi-weight-input');input.parentElement.append(wrap);wrap.append(input,node('span','%'));input.oninput=updateTotal;inputs.push({id:a.id,input});list.append(row);});updateTotal();};yearField.onchange=draw;draw();
-   actions(f,'Simpan bobot',error=>{const current=load(),result=setWorkWeights(current,k.id,yearField.value,Object.fromEntries(inputs.map(({id,input})=>[id,input.value])),activities(),identity());if(result.error){error.textContent=result.error;return false;}if(!persist(result.state)){error.textContent='Bobot gagal disimpan di browser.';return false;}year=yearField.value;ys.value=year;render();return true;},['bod']);
-  }
-  function detail(k){const f=popup('Rincian KPI · '+k.code),r=calculate(s,k,year),final=calculate(s,k,'2029');f.append(node('h3',k.indicator),node('p',k.criterion,'role-note'),node('p',year+': '+format(k,r.actual)+' / '+format(k,r.target)+' · '+r.status),node('p','Target akhir 2029: '+format(k,final.target)+' · Capaian akhir '+(final.ratio==null?'—':num(final.ratio*100)+'%')));
-   const work=workProgress(s,k,year,activities()),box=node('section',undefined,'kpi-work-panel');box.append(node('h3','Progres pekerjaan · '+year),node('strong',work.valid?num(work.progress)+'% pekerjaan selesai':'Bobot belum tersedia / perlu diperbarui'),node('p',work.completed+' / '+work.tasks.length+' aktivitas selesai. '+(work.reason||'Total bobot 100%.'),'role-note'));
-   if(work.valid){const bar=node('progress');bar.max=100;bar.value=work.progress;bar.setAttribute('aria-label','Progres pekerjaan berbobot');box.append(bar);}
-   work.tasks.forEach(a=>{const row=node('div',undefined,'kpi-work-row');row.append(node('span',a.code+' · '+a.title),badge(a.status),node('span',work.plan?.weights[a.id]!=null?num(work.plan.weights[a.id]/100)+'%':'Belum diatur'));box.append(row);});if(role()==='bod')box.append(button('Atur bobot aktivitas',()=>weightsEditor(k)));box.append(node('p','Progres pekerjaan terpisah dari capaian KPI. Hasil negara / proyek tetap dihitung dari hasil unik yang disetujui.','role-note'));f.append(box);
+  function detail(k){const f=popup('Rincian KPI · '+k.code);f.append(node('h3',k.indicator));
+   const annualSection=node('section',undefined,'kpi-detail-annual'),annualHead=node('div',undefined,'kpi-detail-annual-head');annualHead.append(node('h3','Target kumulatif per tahun'));
+   if(role()==='bod')annualHead.append(button('Target per tahun',()=>annual(k),true));
+   annualSection.append(annualHead,node('p',YEARS.map(y=>y+': '+format(k,y==='2029'?k.target:k.annual[y])).join(' · ')),node('p',k.annualConfirmed?'Sudah ditetapkan BOD.':'Distribusi contoh — belum ditetapkan BOD.','role-note'));
+   f.append(annualSection,node('p',k.criterion,'role-note'));
    f.append(node('h3','Hasil dan sumber hitungan'));const results=s.outcomes.filter(o=>o.kpiId===k.id);if(!results.length)f.append(node('p','Belum ada hasil.'));results.forEach(o=>{const line=node('div',undefined,'kpi-result-line');line.append(node('strong',o.name),node('span',o.entity+' · '+o.year+' · '+({approved:'Tercapai',pending:'Menunggu pemeriksaan aktivitas',revision:'Perlu revisi',planned:'Belum tercapai'}[o.status]||o.status)+(o.demo?' · Dummy':'')),node('small',o.note));if(o.reviewNote)line.append(node('small','BOD: '+o.reviewNote));o.evidence.forEach(url=>{const a=node('a','Buka bukti ↗');a.href=safeURL(url);a.target='_blank';a.rel='noopener noreferrer';line.append(a);});f.append(line);});
-   if(role()==='bod')f.append(button('Target per tahun',()=>annual(k)),button('Koreksi manual',()=>correct(k)));f.append(node('h3','Target kumulatif per tahun'),node('p',YEARS.map(y=>y+': '+format(k,k.annual[y])).join(' · ')),node('p',k.annualConfirmed?'Sudah ditetapkan BOD.':'Distribusi contoh — belum ditetapkan BOD.','role-note'));
-   s.history.filter(h=>h.action.includes(k.code)).slice(-5).forEach(h=>f.append(node('small',h.name+' · '+h.action)));
+   s.history.filter(h=>h.action.includes(k.code)&&!h.action.startsWith('Menetapkan bobot aktivitas ')&&!h.action.startsWith('Koreksi ')&&!h.action.startsWith('Menghapus koreksi ')).slice(-5).forEach(h=>f.append(node('small',h.name+' · '+h.action)));
   }
   const filters=node('div',undefined,'kpi-scope-filter'),ys=field(filters,'Tahun',year,YEARS.map(y=>({value:y,label:y==='2029'?'2029 · target akhir':y}))),fs=field(filters,'Flagship','',[{value:'',label:'Semua flagship'},...c.flags]);screen.querySelector('.kpi-kaki').before(filters);ys.onchange=()=>{year=ys.value;render();};fs.onchange=()=>{flag=fs.value;render();};
-  screen.querySelector('.layar-deskripsi').textContent='Realisasi mengikuti hasil yang disetujui BOD melalui detail aktivitas. Target dan capaian mengikuti tahun yang dipilih; progres aktivitas dilihat terpisah.';
+  screen.querySelector('.layar-deskripsi').textContent='Realisasi mengikuti hasil yang disetujui BOD melalui detail aktivitas. Target dan capaian mengikuti tahun yang dipilih.';
   const explanation=$('kpi-catatan');if(explanation)explanation.textContent='Capaian = realisasi / target kumulatif tahun terpilih. Hijau ≥ 100%, kuning ≥ 70%, merah < 70%. Target nol tidak dibagi. Hasil negara / proyek dihitung sekali per ID; persentase berasal dari pengukuran, bukan jumlah aktivitas selesai.';
-  function render(){s=load();const visible=s.kpis.filter(k=>!flag||k.flags.includes(flag)),counts={done:0,ontrack:0,attention:0,empty:0};
+  function render(){s=load();if(!c.flags.includes(flag))flag='';fs.replaceChildren(new Option('Semua flagship',''),...c.flags.map(name=>new Option(name,name)));fs.value=flag;const visible=s.kpis.filter(k=>!flag||k.flags.includes(flag)),counts={done:0,ontrack:0,attention:0,empty:0};
    for(const g of ['strategi','smart']){const tbody=$('kpi-isi-'+g);tbody.replaceChildren();visible.filter(k=>k.group===g).forEach(k=>{const r=calculate(s,k,year);counts[r.ratio==null?'empty':r.ratio>=1?'done':r.ratio>=.7?'ontrack':'attention']++;
     (flag?[flag]:k.flags).forEach(p=>{
      const key=k.id+'::'+p,tr=node('tr');tr.dataset.kpiId=k.id;
      tr.append(node('td',g==='strategi'?'Strategi':'SMART','kk-kat'));
      const prog=node('td',p,'kk-prog');if(k.flags.length>1)prog.append(node('small',k.code+' · KPI bersama','role-status'));tr.append(prog);
-     const title=node('td',undefined,'kk-rumus');title.append(link(k.indicator,()=>detail(k)));
-     const work=workProgress(s,k,year,activities());if(work.plan)title.append(node('small',work.valid?'Progres pekerjaan: '+num(work.progress)+'%':'Bobot perlu diperbarui','kpi-work-caption'));
+     const title=node('td',undefined,'kk-rumus'),indicator=link(k.indicator,()=>detail(k));
+     if(document.body.classList.contains('kpi-reference-page'))title.append(indicator);
+     else{const heading=node('div',undefined,'kpi-indicator-line'),open=button('',()=>detail(k));open.className='role-icon kpi-detail-open';open.title='Rincian KPI';open.setAttribute('aria-label','Buka rincian KPI '+k.code+' · '+p);
+      const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d','M6 3h8l4 4v14H6V3ZM14 3v5h4M9 12h6M9 16h6');svg.append(path);open.append(svg);heading.append(indicator,open);title.append(heading);}
+
      const child=node('tr',undefined,'kpi-collapsed-row'),childId='kpi-row-detail-'+g+'-'+encodeURIComponent(key);
      child.id=childId;child.hidden=!expanded.has(key);
      const toggle=link('',()=>{const open=!expanded.has(key);open?expanded.add(key):expanded.delete(key);child.hidden=!open;toggle.setAttribute('aria-expanded',String(open));});
@@ -176,7 +148,7 @@
      panel.append(target,actual,finalTarget);cell.append(panel);child.append(cell);tbody.append(tr,child);
     });
    });const caption=screen.querySelector('#kpi-grup-'+g).nextElementSibling;caption.textContent=visible.filter(k=>k.group===g).length+' indikator unik · tahun '+year;}
-   const statuses=node('span',undefined,'kpi-summary-statuses');statuses.append(badge('Tercapai '+counts.done),badge('On track '+counts.ontrack),badge('Perlu perhatian '+counts.attention),badge('Belum ada data / target '+counts.empty));$('kpi-ringkas').replaceChildren(node('span',visible.length+' indikator unik · '+year,'kpi-summary-label'),statuses);roleButtons.replaceChildren();if(role()==='bod')roleButtons.append(button('Kelola flagship',manageFlags),button('Tambah KPI',()=>edit(),true),button('Target per tahun',()=>annual()));
+   const statuses=node('span',undefined,'kpi-summary-statuses');statuses.append(badge('Tercapai '+counts.done),badge('On track '+counts.ontrack),badge('Perlu perhatian '+counts.attention),badge('Belum ada data / target '+counts.empty));$('kpi-ringkas').replaceChildren(node('span',visible.length+' indikator unik · '+year,'kpi-summary-label'),statuses);roleButtons.replaceChildren();if(role()==='bod')roleButtons.append(button('Kelola flagship',manageFlags),button('Tambah KPI',()=>edit(),true),button('Target per tahun',()=>annual(),true));
    notice.textContent=(role()==='bod'?'BOD menetapkan target; hasil KPI diperiksa lewat detail aktivitas.':role()==='manajer'?'Manager mengisi hasil dan bukti lewat detail aktivitas.':'Akses lihat KPI dan sumber hitungannya.')+' Data contoh untuk simulasi; tersimpan di browser. KPI bersama dihitung sekali dalam ringkasan.';
   }
   const exportButton=screen.querySelector('.kpi-kaki button'),tools=node('div',undefined,'role-toolbar kpi-summary-actions');exportButton.before(tools);tools.append(roleButtons,exportButton);exportButton.onclick=()=>csv('kpi-'+year+'.csv',[['Kode','Flagship','Indikator','Tahun','Target kumulatif','Target akhir','Satuan','Realisasi','Capaian (%)','Status'],...s.kpis.filter(k=>!flag||k.flags.includes(flag)).map(k=>{const r=calculate(s,k,year);return[k.code,k.flags.join(' / '),k.indicator,year,r.target,k.target,k.unit,r.actual,r.ratio==null?'':r.ratio*100,r.status];})]);
