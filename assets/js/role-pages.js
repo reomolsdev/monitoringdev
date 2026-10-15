@@ -4,6 +4,7 @@
 
  document.body.classList.add('role-pages');
 
+ const periodReadOnly=()=>Boolean(window.FYDP?.readOnly),periodYear=()=>window.FYDP?.defaultYear()||'2026';
  const $=id=>document.getElementById(id), activity=!!$('layar-aktivitas'), screen=$(activity?'layar-aktivitas':'layar-kpi');
 
  if(!screen)return;
@@ -12,9 +13,9 @@
 
  let role='manajer';
 
- const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}};
+ const read=(key,fallback)=>{try{return JSON.parse((window.FYDP?.storage||localStorage).getItem(key))??fallback;}catch{return fallback;}};
 
- const save=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));return true;}catch{notice.textContent='Perubahan tidak dapat disimpan. Penyimpanan browser tidak tersedia.';return false;}};
+ const save=(key,value)=>{try{(window.FYDP?.storage||localStorage).setItem(key,JSON.stringify(value));return true;}catch{notice.textContent='Perubahan tidak dapat disimpan. Penyimpanan browser tidak tersedia.';return false;}};
 
  const node=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 
@@ -44,7 +45,7 @@
 
  function field(form,label,value='',options=null,kind='text',required=true){const wrap=node('div',undefined,'role-field'),caption=node('label',label);wrap.append(caption);const input=node(options?'select':kind==='textarea'?'textarea':'input');if(options){options.forEach(v=>input.add(new Option(typeof v==='string'?v:v.label,typeof v==='string'?v:v.value)));}else if(kind!=='textarea')input.type=kind;input.id='role-field-'+crypto.randomUUID();caption.htmlFor=input.id;input.value=value;input.required=required;wrap.append(input);form.append(wrap);return input;}
 
- function actions(form,text,fn,allowed){const area=node('div',undefined,'role-dialog-actions'),error=node('p','','role-error');error.setAttribute('role','alert');form.append(error,area);area.append(button('Batal',()=>dialog.close()),button(text,()=>{if(!allowed.includes(role)){dialog.close();return;}if(!form.reportValidity())return;try{if(fn(error)!==false)dialog.close();}catch{error.textContent='Periksa kembali data yang diisi.';}} ,true));}
+ function actions(form,text,fn,allowed){const area=node('div',undefined,'role-dialog-actions'),error=node('p','','role-error');error.setAttribute('role','alert');form.append(error,area);area.append(button('Batal',()=>dialog.close()),button(text,()=>{if(periodReadOnly()){return;}if(!allowed.includes(role)){dialog.close();return;}if(!form.reportValidity())return;try{if(fn(error)!==false)dialog.close();}catch{error.textContent='Periksa kembali data yang diisi.';}} ,true));}
 
  const flags=['AILOS','PROGRES','ADCEND','R-MODE','FLEXERA','CREATE','CODEA','NEXEL','COALA'];
 
@@ -60,7 +61,7 @@
  function refreshFlagshipChoices(){const select=$('f-flagship');if(!select)return;const previous=select.value;select.replaceChildren(new Option('Semua flagship',''),...flags.map(name=>new Option(name,name)));select.value=flags.includes(previous)?previous:'';}
  refreshFlagshipChoices();
  function manageFlags(){
-  if(role!=='bod')return;
+  if(role!=='bod'||periodReadOnly())return;
   const KEY='seamolec-role-flagships-v1';let records=[...programs,...deletedPrograms];
   const active=()=>records.filter(p=>!p.deleted);
   function persist(next,error){
@@ -75,7 +76,7 @@
   function row(form){const r=node('div',undefined,'role-editor-row');form.append(r);return r;}
   function actionIcon(kind,label,fn){const b=button('',fn);b.className='role-icon'+(kind==='delete'?' role-danger':'');b.title=label;b.setAttribute('aria-label',label);const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d',kind==='edit'?'M15 5l4 4M4 20l4-1L20 7l-4-4L4 15v5Z':'M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7');svg.append(path);b.append(svg);return b;}
   function list(success=''){
-   if(role!=='bod')return;const form=flagshipDialog('Kelola flagship','role-flagship-list-dialog');
+   if(role!=='bod'||periodReadOnly())return;const form=flagshipDialog('Kelola flagship','role-flagship-list-dialog');
    form.append(message('Pilih tindakan pada daftar. Tambah flagship dan ubah nama memakai formulir yang terpisah.'));
    if(success){const info=node('p',success,'role-flagship-success');info.setAttribute('role','status');form.append(info);}
    const tools=node('div',undefined,'role-flagship-toolbar');tools.append(node('span',active().length+' flagship','role-flagship-count'),button('+ Tambah flagship',add,true));form.append(tools);
@@ -91,7 +92,7 @@
    const actions=node('div',undefined,'role-dialog-actions');actions.append(button('Tutup',()=>form.closest('dialog').close()));form.append(actions);
   }
   function add(){
-   if(role!=='bod')return;const form=flagshipDialog('Tambah flagship','role-flagship-edit-dialog');
+   if(role!=='bod'||periodReadOnly())return;const form=flagshipDialog('Tambah flagship','role-flagship-edit-dialog');
    form.append(message('Buat flagship baru. Periksa semua data sebelum menyimpan; setelah dibuat, hanya namanya yang dapat diubah.'));
    const first=row(form),code=field(first,'Kode flagship',''),name=field(first,'Nama flagship','');code.placeholder='Contoh: DIGITAL';code.maxLength=24;code.oninput=()=>{code.value=code.value.toUpperCase().replace(/\s+/g,'-');};name.placeholder='Nama lengkap flagship';
    const second=row(form),division=field(second,'Divisi pelaksana','IT&KM',['IT&KM','CPMP','Training','R&D','Admin & Finance']),strategy=field(second,'Kode strategi','ST3',['ST1','ST3','WT2','WT3','WO2']);
@@ -106,7 +107,7 @@
    },true));
   }
   function rename(p){
-   if(role!=='bod')return;const form=flagshipDialog('Ubah nama flagship','role-flagship-edit-dialog');
+   if(role!=='bod'||periodReadOnly())return;const form=flagshipDialog('Ubah nama flagship','role-flagship-edit-dialog');
    const summary=node('div',undefined,'role-flagship-locked-summary');summary.append(node('strong',p.name),node('span',(p.division||'—')+' · '+(p.strategy||strategy[p.name]||'—')),node('small','Kode, divisi, strategi, dan program / komponen tidak berubah.'));form.append(summary);
    const name=field(form,'Nama flagship',p.fullName||p.name),error=errorField(form),actions=node('div',undefined,'role-dialog-actions');form.append(actions);
    actions.append(button('Batal',()=>list()),button('Simpan nama',()=>{if(role!=='bod'||!form.reportValidity())return;if(!name.value.trim()){error.textContent='Isi nama flagship.';return;}
@@ -114,7 +115,7 @@
    },true));
   }
   function remove(p){
-   if(role!=='bod')return;const form=flagshipDialog('Hapus flagship?','role-flagship-edit-dialog'),phrase='Saya Menghapus Ini dengan Sadar';
+   if(role!=='bod'||periodReadOnly())return;const form=flagshipDialog('Hapus flagship?','role-flagship-edit-dialog'),phrase='Saya Menghapus Ini dengan Sadar';
    form.append(node('strong',p.name+' · '+(p.fullName||p.name)),message('Flagship dihapus dari daftar pilihan. Aktivitas, KPI, dan dokumen yang sudah terkait tetap tersimpan.'));
    const instruction=node('p','Untuk melanjutkan, ketik persis:','role-delete-instruction');instruction.append(node('strong',phrase));form.append(instruction);
    const confirmation=field(form,'Kalimat konfirmasi','');confirmation.placeholder=phrase;confirmation.autocomplete='off';confirmation.spellcheck=false;
@@ -141,26 +142,27 @@
 
   const originalRows=new Map([...body.rows].map((r,i)=>[items[i].id,r.cloneNode(true)]));
 
+  if(window.FYDP&&!window.FYDP.isLegacy)items=[];
   const updates=read('seamolec-role-activities-v1',{});items=items.map(d=>({...d,...updates[d.id]}));items.push(...Object.values(updates).filter(d=>!items.some(i=>i.id===d.id)));
 
   const directDemoId='demo-staff-direct-activity';
-  if(!read('seamolec-staff-direct-example-v1',false)){
+  if((!window.FYDP||window.FYDP.isLegacy)&&!periodReadOnly()&&!read('seamolec-staff-direct-example-v1',false)){
    if(!items.some(d=>d.id===directDemoId))items.push({id:directDemoId,number:81,flag:'AILOS',component:'Open High School (SMA Terbuka)',code:'I9',title:'Contoh: Uji coba SEAMOLEC Lite — penugasan langsung BOD',pillar:'I - IT&KM',division:'IT&KM',pic:'Rafa',status:'On track',progress:0,note:'Contoh penugasan langsung dari BOD kepada Rafa - Staf IT.',createdBy:{name:'Rafa',role:'Staf'},assignedBy:{name:'Andi Darmawan',role:'BOD'},demo:true});
    if(save('seamolec-role-activities-v1',Object.fromEntries(items.map(d=>[d.id,d]))))save('seamolec-staff-direct-example-v1',true);
   }
   const directIndex=items.findIndex(d=>d.id===directDemoId);if(directIndex>=0){const [demo]=items.splice(directIndex,1);items.splice(4,0,demo);}
   const demoComments=[{name:'Andi Darmawan',role:'BOD',actor:'Andi Darmawan (BOD)',text:'Pastikan bukti capaian sesuai dengan target tahun 2026 sebelum laporan diajukan.',time:'2026-10-01T02:00:00Z'},{name:'Manajer Program',role:'Manajer Program',actor:'Manajer Program',text:'Dokumen pendukung sedang dilengkapi bersama tim pelaksana.',time:'2026-10-02T03:30:00Z'}];items=items.map((d,i)=>({...d,comments:d.comments===undefined&&i<4?demoComments.map(c=>({...c})):d.comments||[]}));
   // Seed examples once; explicit saved user values and decisions always win.
-  if(!read('seamolec-activity-flow-examples-v2',false)){
+  if((!window.FYDP||window.FYDP.isLegacy)&&!periodReadOnly()&&!read('seamolec-activity-flow-examples-v2',false)){
    const demoStates=['Menunggu persetujuan','Menunggu persetujuan','Disetujui','Perlu revisi','Ditolak'],now=Date.now();
    items=items.map((d,i)=>{const state=demoStates[i]||'Menunggu persetujuan',days=i===1?12:2+(i%6);return {...d,partner:d.partner??partners[i%partners.length],funding:d.funding??(i+1)*1500000,realization:d.realization??(i%3===2?15:1+i%5),realizationUnit:d.realizationUnit??(i%3===2?'%':'count'),detailNote:d.detailNote??('Contoh: '+(i%2?'Pelaksanaan program sedang berjalan; bukti pendukung dilengkapi bersama mitra.':'Dokumentasi pelaksanaan dan hasil kegiatan tersedia pada tautan dokumen.')),activityReviewStatus:d.activityReviewStatus??state,reviewRequestedAt:d.reviewRequestedAt??new Date(now-days*86400000).toISOString(),activityReviewedAt:d.activityReviewedAt??(['Disetujui','Perlu revisi','Ditolak'].includes(d.activityReviewStatus??state)?new Date(now-86400000).toISOString():null)};});
    if(save('seamolec-role-activities-v1',Object.fromEntries(items.map(d=>[d.id,d]))))save('seamolec-activity-flow-examples-v2',true);
   }
-  let subtasks=read('seamolec-role-subtasks-v1',[{id:'sample-sub-1',parent:'activity-3',title:'Audit kebutuhan konektivitas',owner:'Staf',ownerName:'Rio',creator:{name:'Rio',role:'Staf IT'},due:'2026-06-10',status:'Selesai'},{id:'sample-sub-2',parent:'activity-3',title:'Uji coba akses offline',owner:'Staf',ownerName:'Rafa',creator:{name:'Rafa',role:'Staf IT'},due:'2026-06-30',status:'On track'},{id:'sample-sub-3',parent:'activity-3',title:'Dokumentasi pilot',owner:'Staf',ownerName:'Dina',creator:{name:'Dina',role:'Staf IT'},due:'2026-07-15',status:'Belum mulai'}]);
+  let subtasks=read('seamolec-role-subtasks-v1',window.FYDP&&!window.FYDP.isLegacy?[]:[{id:'sample-sub-1',parent:'activity-3',title:'Audit kebutuhan konektivitas',owner:'Staf',ownerName:'Rio',creator:{name:'Rio',role:'Staf IT'},due:'2026-06-10',status:'Selesai'},{id:'sample-sub-2',parent:'activity-3',title:'Uji coba akses offline',owner:'Staf',ownerName:'Rafa',creator:{name:'Rafa',role:'Staf IT'},due:'2026-06-30',status:'On track'},{id:'sample-sub-3',parent:'activity-3',title:'Dokumentasi pilot',owner:'Staf',ownerName:'Dina',creator:{name:'Dina',role:'Staf IT'},due:'2026-07-15',status:'Belum mulai'}]);
 
   const sampleCreators={'sample-sub-1':{name:'Rio',role:'Staf IT'},'sample-sub-2':{name:'Rafa',role:'Staf IT'},'sample-sub-3':{name:'Dina',role:'Staf IT'}};
   subtasks=subtasks.map(s=>({...s,creator:s.creator||(s.ownerName?{name:s.ownerName,role:s.ownerRole||'Staf'}:sampleCreators[s.id]||{name:s.owner||'Staf',role:'Staf'})}));
-  const ownsSubtask=s=>role==='staf'&&s.creator.name===account().name;
+  const ownsSubtask=s=>!periodReadOnly()&&role==='staf'&&s.creator.name===account().name;
   const expanded=new Set();let page=1,matches=[];
   const normalize=s=>String(s||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 
@@ -169,17 +171,17 @@
   const commit=next=>{const changed=Object.fromEntries(next.map(d=>[d.id,d]));if(!save('seamolec-role-activities-v1',changed))return false;items=next;render();updateInbox();return true;};
 
   const ownsActivity=d=>role==='staf'&&d?.createdBy?.role==='Staf'&&(d.createdBy.id&&account().id?d.createdBy.id===account().id:d.createdBy.name===account().name);
-  const canManageActivity=d=>role==='manajer'||ownsActivity(d);
-  if(!read('seamolec-kpi-activity-links-v2',false)){
+  const canManageActivity=d=>!periodReadOnly()&&(role==='manajer'||ownsActivity(d));
+  if((!window.FYDP||window.FYDP.isLegacy)&&!periodReadOnly()&&!read('seamolec-kpi-activity-links-v2',false)){
    const next=items.map(d=>d.kpiId?d:['activity-1','activity-2','activity-3'].includes(d.id)&&d.flag==='AILOS'?{...d,kpiId:'kpi-7',kpiOutcomeId:'demo-pilot'}:d);
    if(save('seamolec-role-activities-v1',Object.fromEntries(next.map(d=>[d.id,d])))){items=next;save('seamolec-kpi-activity-links-v2',true);}
   }
   window.activityProgramComponents=name=>[...new Set(items.filter(d=>!d.deleted&&d.flag===name).map(d=>d.component))];
-  function editor(d=null){if(!['manajer','staf'].includes(role)||(d&&!canManageActivity(d)))return;
+  function editor(d=null){if(periodReadOnly())return;if(!['manajer','staf'].includes(role)||(d&&!canManageActivity(d)))return;
    const form=popup(d?'Ubah aktivitas':'Tambah aktivitas');dialog.classList.add('role-editor-dialog');
    const row=(cls='')=>{const r=node('div',undefined,'role-editor-row '+cls);form.append(r);return r;};
    const programRow=row(),flag=field(programRow,'Flagship',d?.flag||'AILOS',flags),component=field(programRow,'Program / komponen',d?.component||'',[]);
-   const titleRow=row('role-editor-title-row'),title=field(titleRow,'Judul aktivitas',d?.title||''),year=field(titleRow,'Tahun',d?.year||'2026',['2025','2026','2027','2028','2029']);title.placeholder='Nama aktivitas';
+   const titleRow=row('role-editor-title-row'),title=field(titleRow,'Judul aktivitas',d?.title||''),year=field(titleRow,'Tahun',d?.year||periodYear(),window.FYDP?.years||['2025','2026','2027','2028','2029']);title.placeholder='Nama aktivitas';
    const divisionOptions=[{value:'IT&KM',label:'I — IT&KM'},{value:'Training',label:'T — Training'},{value:'R&D',label:'R — Research & Development'},{value:'CPMP',label:'C — Communications / CPMP'},{value:'Admin & Finance',label:'A — Admin & Finance'}];
    const divisionRow=row(),division=field(divisionRow,'Divisi / pilar',d?.division||'IT&KM',divisionOptions),code=field(divisionRow,'Kode aktivitas',d?.code||'');code.placeholder='Otomatis, dapat diedit';
    const pic=field(form,'PIC (pisahkan beberapa nama dengan koma)',d?.pic||'Arie Susanty');if(role==='staf'){pic.value=account().name;pic.readOnly=true;pic.previousElementSibling.textContent='PIC (otomatis akun Anda)';}
@@ -195,7 +197,7 @@
    kpi.onchange=()=>{syncResults();};syncKpis();
    const prefixFor=()=>({'Training':'T','R&D':'R','IT&KM':'I','CPMP':'C','Admin & Finance':'A'}[division.value]);
    const autoCode=()=>{const prefix=prefixFor();const nums=items.filter(i=>!i.deleted&&i.id!==d?.id&&i.flag===flag.value&&i.component===component.value&&i.division===division.value).map(i=>Number(i.code.match(new RegExp('^'+prefix+'(\\d+)$'))?.[1]||0));code.value=prefix+(Math.max(0,...nums)+1);};
-   const choices=()=>{const options=[...new Set([...(programs.find(p=>p.name===flag.value)?.components||[]),...items.filter(i=>!i.deleted&&i.flag===flag.value).map(i=>i.component)])];if(d?.flag===flag.value&&!options.includes(d.component))options.push(d.component);component.replaceChildren(...options.map(v=>new Option(v,v)));component.value=d?.flag===flag.value?d.component:options[0]||'';if(!d)autoCode();};choices();flag.onchange=()=>{division.value=programs.find(p=>p.name===flag.value)?.division||division.value;choices();autoCode();syncKpis();};division.onchange=component.onchange=autoCode;
+   const choices=()=>{const options=[...new Set([...(programs.find(p=>p.name===flag.value)?.components||[]),...(window.ActivityData?.programs?.(flag.value)||[]),...items.filter(i=>!i.deleted&&i.flag===flag.value).map(i=>i.component)])];if(d?.flag===flag.value&&!options.includes(d.component))options.push(d.component);component.replaceChildren(...options.map(v=>new Option(v,v)));component.value=d?.flag===flag.value?d.component:options[0]||'';if(!d)autoCode();};choices();flag.onchange=()=>{division.value=programs.find(p=>p.name===flag.value)?.division||division.value;choices();autoCode();syncKpis();};division.onchange=component.onchange=autoCode;
    form.append(node('p','Pilih KPI dan hasil terkait, lalu simpan bukti melalui detail aktivitas. Approve BOD menyatakan hasil tersebut terbukti dan memasukkannya ke perhitungan KPI.','role-editor-hint'));
    actions(form,'Simpan aktivitas',error=>{if(items.some(i=>!i.deleted&&i.id!==d?.id&&i.flag===flag.value&&i.component===component.value&&i.code===code.value.trim())){error.textContent='Kode sudah digunakan dalam program ini.';return false;}
     const pillar={'Training':'T - Capacity Building','R&D':'R - R&D','IT&KM':'I - IT&KM','CPMP':'C - CPMP','Admin & Finance':'A - Admin & Finance'}[division.value];
@@ -218,17 +220,29 @@
   }
   function realizationHeading(d){
    const heading=node('div',undefined,'role-realization-heading');
-   heading.append(node('h3','Realisasi','role-detail-realization'),node('h3',d.title,'role-detail-title'),node('p',`${d.flag} · ${d.code} · ${d.division} · ${d.year||'2026'}`,'role-detail-context'));
+   heading.append(node('h3','Realisasi','role-detail-realization'),node('h3',d.title,'role-detail-title'),node('p',`${d.flag} · ${d.code} · ${d.division} · ${d.year||periodYear()}`,'role-detail-context'));
    const data=window.KPISystem.load(),outcomes=data.outcomes.filter(o=>o.activityIds.includes(d.id)||o.id===d.kpiOutcomeId),ids=[...new Set([d.kpiId,...outcomes.map(o=>o.kpiId)].filter(Boolean))];
    ids.forEach(id=>{const k=data.kpis.find(k=>k.id===id),o=outcomes.find(o=>o.kpiId===id);if(k)heading.append(node('p','KPI: '+k.code+' · '+k.indicator+(o?' · Hasil: '+o.name+' · '+({approved:'Tercapai',pending:'Menunggu pemeriksaan aktivitas',revision:'Perlu revisi',planned:'Belum tercapai'}[o.status]||o.status):' · Belum memilih hasil terkait'),'role-note'));});
    return heading;
   }
+  function activityNotes(d){
+   const section=node('section',undefined,'role-activity-notes'),head=node('div',undefined,'role-notes-head'),list=node('div',undefined,'role-bod-history-list');
+   head.append(node('h3','Catatan'));list.setAttribute('role','log');list.setAttribute('aria-label','Catatan yang diterima');
+   const entries=[...(d.reviewHistory||[]),...(d.comments||[]).filter(c=>!(d.reviewHistory||[]).some(h=>h.id===c.id))].filter(c=>!c.deleted&&c.text?.trim()).filter(c=>role==='bod'?/manager|manajer/i.test(c.role||''):role==='manajer'?/bod/i.test(c.role||''):true).sort((a,b)=>(Date.parse(b.time)||0)-(Date.parse(a.time)||0));
+   let expanded=false;const toggle=button('Riwayat catatan',()=>{expanded=!expanded;render();});toggle.classList.add('role-notes-history-toggle');head.append(toggle);section.append(head,list);
+   function render(){toggle.setAttribute('aria-expanded',String(expanded));toggle.textContent=expanded?'Tutup riwayat':'Riwayat catatan';list.replaceChildren();
+    if(!entries.length)list.append(node('p','Belum ada catatan.','role-note'));
+    (expanded?entries:entries.slice(0,1)).forEach(c=>{const card=node('article',undefined,'role-bod-history-entry'),header=node('div',undefined,'role-bod-history-head');header.append(node('strong',c.name||c.actor||'Pengguna'),node('span',c.role||'','role-chat-role'));
+     if(c.decision){const status=node('span',c.decision,'role-bod-history-status');status.dataset.decision=c.decision;header.append(status);}
+     const time=node('time',new Date(c.time).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'}),'role-chat-time');time.dateTime=c.time||'';card.append(header,node('p',c.text,'role-bod-history-text'),time);list.append(card);});
+   }render();return section;
+  }
   function bodRealizationReview(d){
-   if(role!=='bod')return;
+   if(role!=='bod'||periodReadOnly())return;
    const form=popup('Detail Realisasi');dialog.classList.add('role-bod-review-dialog');
    const current=()=>read('seamolec-role-activities-v1',{})[d.id]||items.find(i=>i.id===d.id)||d;
    const related=()=>documents().filter(doc=>doc.activityId===d.id||(!doc.activityId&&doc.flagship===d.flag&&doc.kode===d.code));
-   const signature=()=>{const a=current();return JSON.stringify([a.title,a.realizationSubtitle,a.kpiId,a.kpiOutcomeId,a.year,a.realization,a.realizationUnit,a.kpiMeasurement,a.detailNote,a.reviewRequestedAt,related().map(doc=>[doc.id,doc.url])]);};
+   const signature=()=>{const a=current();return JSON.stringify([a.title,a.realizationSubtitle,a.kpiId,a.kpiOutcomeId,a.year,a.realization,a.realizationUnit,a.kpiMeasurement,a.detailNote,a.reviewRequestedAt,related().map(doc=>[doc.id,doc.judul,doc.url])]);};
    const initialSignature=signature(),opened=new Set(),data=window.KPISystem.load(),k=data.kpis.find(k=>k.id===d.kpiId),percent=Boolean(k&&k.method!=='count');
    const submitted=node('section',undefined,'role-bod-submitted');submitted.setAttribute('aria-label','Realisasi yang diajukan Manager');form.append(submitted);
    submitted.append(realizationHeading(d));
@@ -239,23 +253,24 @@
    const docs=node('div',undefined,'role-bod-document-list');submitted.append(docs);
    let submit;
    const ready=()=>related().length>0&&related().every(doc=>safeURL(doc.url)&&opened.has(doc.id));
-   const updateSubmit=()=>{submit.disabled=decision.value==='Accept'&&!ready();submit.title=submit.disabled?'Buka semua link dokumen sebelum Accept.':'';decision.dataset.decision=decision.value;comment.required=decision.value!=='Accept';hint.textContent=decision.value==='Accept'?'Komentar opsional. Buka semua link dokumen sebelum menerima realisasi.':decision.value==='Reject'?'Jelaskan alasan realisasi ditolak.':'Jelaskan bagian yang perlu diperbaiki atau dilengkapi Manager.';error.textContent='';comment.removeAttribute('aria-invalid');};
-   related().forEach((doc,i)=>{const row=node('div',undefined,'role-bod-document-row'),url=safeURL(doc.url),input=field(row,i?'Link Dokumen '+(i+1):'Link Dokumen',doc.url,null,'text',false);input.readOnly=true;
-    if(url){const open=node('a','↗','role-bod-open-document');open.href=url;open.target='_blank';open.rel='noopener noreferrer';open.title='Buka dokumen di tab baru';open.setAttribute('aria-label','Buka link dokumen '+(i+1));open.onclick=()=>{opened.add(doc.id);updateSubmit();};input.classList.add('role-bod-clickable-url');input.setAttribute('aria-label','Link dokumen '+(i+1)+'; tekan Enter untuk membuka');input.onclick=()=>open.click();input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();open.click();}};row.append(open);}
-    docs.append(row);
+   const updateSubmit=()=>{submit.disabled=decision.value==='Accept'&&!ready();submit.title=submit.disabled?'Buka semua link dokumen sebelum Accept.':'';decision.dataset.decision=decision.value;comment.required=decision.value!=='Accept';hint.textContent=decision.value==='Accept'?'Catatan opsional. Buka semua link dokumen sebelum menerima realisasi.':decision.value==='Reject'?'Jelaskan alasan realisasi ditolak.':'Jelaskan bagian yang perlu diperbaiki atau dilengkapi Manager.';error.textContent='';comment.removeAttribute('aria-invalid');};
+   docs.append(node('p','Dokumen','role-bod-label'));
+   related().forEach((doc,i)=>{const row=node('div',undefined,'role-bod-document-row role-document-summary'),url=safeURL(doc.url);row.append(node('strong',doc.judul||'Dokumen '+(i+1),'role-document-title'));
+    if(url){const open=node('a','Buka ↗','role-document-view');open.href=url;open.target='_blank';open.rel='noopener noreferrer';open.title='Buka dokumen di tab baru';open.setAttribute('aria-label','Buka dokumen '+(doc.judul||i+1));open.onclick=()=>{opened.add(doc.id);updateSubmit();};row.append(open);}docs.append(row);
    });
-   if(!related().length)docs.append(node('p','Link Dokumen','role-bod-label'),node('p','Belum ada dokumen yang diajukan.','role-note'));
+   if(!related().length)docs.append(node('p','Belum ada dokumen yang diajukan.','role-note'));
    const decision=field(form,'Keputusan Review','Accept',['Accept','Reject','Revisi']);decision.classList.add('role-bod-decision');
-   const comment=field(form,'Komentar / Alasan','',null,'textarea',false);comment.placeholder='Tuliskan alasan keputusan atau catatan revisi...';
+   form.append(activityNotes(d));
+   const comment=field(form,'Catatan','',null,'textarea',false);comment.placeholder='Tuliskan catatan atau alasan keputusan...';comment.parentElement.querySelector('label').classList.add('sr-only');
    const hint=node('p','','role-note role-bod-decision-hint'),error=node('p','','role-error');error.setAttribute('role','alert');form.append(hint,error);
    const controls=node('div',undefined,'role-bod-submit-actions');submit=button('Submit Review',()=>{
-    if(role!=='bod')return;
+    if(role!=='bod'||periodReadOnly())return;
     const selected=decision.value,status={Accept:'Disetujui',Reject:'Ditolak',Revisi:'Perlu revisi'}[selected],text=comment.value.trim();if(!status)return;
-    if(selected!=='Accept'&&!text){error.textContent='Komentar / alasan wajib untuk '+selected+'.';comment.setAttribute('aria-invalid','true');comment.focus();return;}
+    if(selected!=='Accept'&&!text){error.textContent='Catatan wajib untuk '+selected+'.';comment.setAttribute('aria-invalid','true');comment.focus();return;}
     if(selected==='Accept'&&!ready())return;
     if(signature()!==initialSignature){notice.textContent='Data realisasi berubah. Periksa ulang pengajuan terbaru sebelum mengirim review.';details(current());return;}
     const a=current(),oldKpi=window.KPISystem.load(),oldDocs=documents(),now=new Date().toISOString();
-    const transition=window.KPISystem.activityResult(oldKpi,a,{status:selected==='Accept'?'approved':selected==='Revisi'?'revision':'rejected',year:a.year||'2026',a:a.kpiMeasurement?.a??null,b:a.kpiMeasurement?.b??null,evidence:related().map(doc=>safeURL(doc.url)),note:a.detailNote||'',actor:identity()});
+    const transition=window.KPISystem.activityResult(oldKpi,a,{status:selected==='Accept'?'approved':selected==='Revisi'?'revision':'rejected',year:a.year||periodYear(),a:a.kpiMeasurement?.a??null,b:a.kpiMeasurement?.b??null,evidence:related().map(doc=>safeURL(doc.url)),note:a.detailNote||'',actor:identity()});
     if(transition.error){error.textContent=transition.error;return;}
     const id=crypto.randomUUID(),entry={id,...identity(),authorId:account().id||null,actor:account().name,decision:selected,text,time:now,kind:'review_decision',replyTo:null};
     const next=audit({...a,kpiFulfilled:selected==='Accept'&&Boolean(a.kpiId&&a.kpiOutcomeId),activityReviewStatus:status,activityReviewedAt:now,managerNotification:{kind:'review_decision',at:now,readAt:null},reviewHistory:[...(a.reviewHistory||[]),entry],comments:text?[...(a.comments||[]),entry]:a.comments||[]},status+' realisasi');
@@ -266,24 +281,21 @@
     notice.textContent='Review '+selected+' dikirim ke Manager.';details(next);
    },true);controls.append(submit);form.append(controls);
    decision.onchange=updateSubmit;comment.oninput=()=>{error.textContent='';comment.removeAttribute('aria-invalid');};updateSubmit();
-   const history=node('section',undefined,'role-bod-history');history.append(node('h3','Riwayat Komentar'));const list=node('div',undefined,'role-bod-history-list');list.setAttribute('role','log');list.setAttribute('aria-label','Riwayat komentar terbaru terlebih dahulu');history.append(list);form.append(history);
-   const entries=[...(d.reviewHistory||[]),...(d.comments||[]).filter(c=>!c.deleted&&!(d.reviewHistory||[]).some(h=>h.id===c.id))].sort((a,b)=>(Date.parse(b.time)||0)-(Date.parse(a.time)||0));
-   if(!entries.length)list.append(node('p','Belum ada riwayat komentar.','role-note'));
-   entries.forEach(c=>{const card=node('article',undefined,'role-bod-history-entry'),head=node('div',undefined,'role-bod-history-head'),who=node('strong',c.name||c.actor||'Pengguna'),badge=node('span',c.decision||'Catatan','role-bod-history-status');badge.dataset.decision=c.decision||'Catatan';head.append(who,node('span',c.role||'','role-chat-role'),badge);const time=node('time',new Date(c.time).toLocaleString('id-ID',{timeZone:'Asia/Jakarta'}),'role-chat-time');time.dateTime=c.time||'';card.append(head,node('p',c.text||'Disetujui tanpa catatan tambahan.','role-bod-history-text'),time);list.append(card);});
+
   }
   function details(d){
    const readChanges=readActivityComments(d);if(readChanges&&commit(items.map(i=>i.id===d.id?readChanges:i)))d=readChanges;
-   if(role==='bod'){bodRealizationReview(d);return;}
-   const form=popup(role==='manajer'?'Detail Realisasi':'Detail & komentar aktivitas');dialog.classList.add('role-chat-dialog');if(role==='manajer')dialog.classList.add('role-manager-review-dialog');
+   if(role==='bod'&&!periodReadOnly()){bodRealizationReview(d);return;}
+   const form=popup(['bod','manajer'].includes(role)?'Detail Realisasi':'Detail & komentar aktivitas');dialog.classList.add('role-chat-dialog');if(role==='manajer')dialog.classList.add('role-manager-review-dialog');
    const current=()=>items.find(i=>i.id===d.id)||d;
-   const editable=role==='manajer',opened=new Set(),related=()=>documents().filter(doc=>doc.activityId===d.id||(!doc.activityId&&doc.flagship===d.flag&&doc.kode===d.code));
-   const reviewSignature=()=>{const a=current();return JSON.stringify([a.kpiId,a.kpiOutcomeId,a.year,a.kpiMeasurement,a.realization,a.realizationUnit,a.detailNote,a.reviewRequestedAt,related().map(doc=>[doc.id,doc.url])]);},openedSignature=reviewSignature();
+   const editable=role==='manajer'&&!periodReadOnly(),opened=new Set(),related=()=>documents().filter(doc=>doc.activityId===d.id||(!doc.activityId&&doc.flagship===d.flag&&doc.kode===d.code));
+   const reviewSignature=()=>{const a=current();return JSON.stringify([a.kpiId,a.kpiOutcomeId,a.year,a.kpiMeasurement,a.realization,a.realizationUnit,a.detailNote,a.reviewRequestedAt,related().map(doc=>[doc.id,doc.judul,doc.url])]);},openedSignature=reviewSignature();
    const summary=node('div',undefined,'role-chat-summary');
    if(editable)summary.append(realizationHeading(d));else summary.append(node('h3',d.title,'role-detail-title'));
    const review=()=>current().activityReviewStatus||'Menunggu persetujuan';
    const requiresRevision=()=>role==='manajer'&&['Perlu revisi','Revisi'].includes(review());
    const state=docStatus({reviewStatus:review()});state.setAttribute('aria-label','Status persetujuan aktivitas: '+review());dialog.querySelector('.role-dialog-head').insertBefore(state,dialog.querySelector('.role-close'));
-   if(!editable)summary.append(node('p',`${d.flag} · ${d.code} · ${d.division} · ${d.year||'2026'}`,'role-detail-context'));form.append(summary);
+   if(!editable)summary.append(node('p',`${d.flag} · ${d.code} · ${d.division} · ${d.year||periodYear()}`,'role-detail-context'));form.append(summary);
    if(!editable){form.append(node('h3','Realisasi','role-detail-realization'));const data=window.KPISystem.load(),outcomes=data.outcomes.filter(o=>o.activityIds.includes(d.id)||o.id===d.kpiOutcomeId),ids=[...new Set([d.kpiId,...outcomes.map(o=>o.kpiId)].filter(Boolean))];ids.forEach(id=>{const k=data.kpis.find(k=>k.id===id),o=outcomes.find(o=>o.kpiId===id);if(k)form.append(node('p','KPI: '+k.code+' · '+k.indicator+(o?' · Hasil: '+o.name+' · '+({approved:'Tercapai',pending:'Menunggu pemeriksaan aktivitas',revision:'Perlu revisi',planned:'Belum tercapai'}[o.status]||o.status):' · Belum memilih hasil terkait'), 'role-note'));});}
    const kpiData=window.KPISystem.load(),supportedKpi=kpiData.kpis.find(k=>k.id===d.kpiId),targetResult=kpiData.outcomes.find(o=>o.id===d.kpiOutcomeId&&o.kpiId===d.kpiId);
    const percent=Boolean(supportedKpi&&supportedKpi.method!=='count'),actualUnit=percent?'Persentase':'Satuan bulat';
@@ -302,28 +314,31 @@
     baseline.oninput=measured.oninput=syncMeasurement;syncMeasurement();
    }
    const links=node('section',undefined,'role-detail-links');const linksHead=node('div',undefined,'role-detail-links-head');linksHead.append(node('h3','Tautan Dokumen'));links.append(linksHead);const rows=node('div',undefined,'role-detail-link-list');links.append(rows);form.append(links);
-   const inputs=[];let add,approveAction;
-   function updatePlus(){if(add)add.disabled=inputs.some(input=>!safeURL(input.value.trim()));}
-   function addLink(value='',doc=null){const row=node('div',undefined,'role-detail-link-row'),input=field(row,editable?'Link Dokumen'+(inputs.length?' '+(inputs.length+1):''):'Dokumen '+(inputs.length+1),value,null,'url',false);input.placeholder='https://docs.google.com/…';input.readOnly=!editable;inputs.push(input);
-    const open=node('a','↗','role-detail-open');open.target='_blank';open.rel='noopener noreferrer';open.title='Buka dokumen';open.setAttribute('aria-label','Buka dokumen '+inputs.length);
-    const refresh=()=>{const url=safeURL(input.value.trim());open.hidden=!url;if(url)open.href=url;else open.removeAttribute('href');updatePlus();};input.oninput=refresh;refresh();open.onclick=()=>{if(doc)opened.add(doc.id);if(approveAction)approveAction.disabled=!related().length||related().some(doc=>!opened.has(doc.id));};row.append(open);row.dataset.documentId=doc?.id||'';rows.append(row);
+   const inputs=[];let add;
+   function updatePlus(){if(add)add.disabled=inputs.some(input=>!input.documentTitle.value.trim()||!safeURL(input.value.trim()));}
+   function addLink(value='',doc=null){const row=node('div',undefined,'role-detail-link-row role-document-editor'),index=inputs.length+1;
+    const titleInput=field(row,'Judul Dokumen'+(index>1?' '+index:''),doc?.judul||'',null,'text',false);titleInput.placeholder='Contoh: Laporan pelaksanaan pelatihan';titleInput.readOnly=!editable;
+    const input=field(row,'Link Dokumen'+(index>1?' '+index:''),value,null,'url',false);input.placeholder='https://docs.google.com/…';input.readOnly=!editable;input.documentTitle=titleInput;inputs.push(input);
+    const open=node('a','↗','role-detail-open');open.target='_blank';open.rel='noopener noreferrer';open.title='Buka dokumen';open.setAttribute('aria-label','Buka dokumen '+index);
+    const refresh=()=>{const url=safeURL(input.value.trim());open.hidden=!url;if(url)open.href=url;else open.removeAttribute('href');updatePlus();};input.oninput=titleInput.oninput=refresh;refresh();row.append(open);row.dataset.documentId=doc?.id||'';rows.append(row);
    }
    related().forEach(doc=>addLink(doc.url,doc));if(editable){if(!inputs.length)addLink();add=button('+',()=>{if(!add.disabled)addLink();});add.className='role-detail-add';add.setAttribute('aria-label','Tambah tautan dokumen');linksHead.append(add);updatePlus();}else if(!inputs.length)rows.append(node('p','Belum ada dokumen yang diunggah.','role-note'));
    const detailError=node('p','','role-error');detailError.setAttribute('role','alert');const controls=node('div',undefined,'role-dialog-actions');form.append(detailError,controls);
    function persistDetails(sendRevision=false){
-    if(role!=='manajer'||(sendRevision&&!requiresRevision()))return;
+    if(periodReadOnly()||role!=='manajer'||(sendRevision&&!requiresRevision()))return;
     const text=comment.value.trim();
     if(sendRevision&&!text){error.textContent='Isi catatan perbaikan sebelum mengirim revisi.';comment.setAttribute('aria-invalid','true');comment.focus();return;}
     const realization=actualInput.value.trim()===''?null:Number(actualInput.value);
     if(realization!=null&&(!Number.isFinite(realization)||realization<0||(!percent&&!Number.isInteger(realization))||(supportedKpi?.method==='ratio'&&realization>100))){detailError.textContent='Isi realisasi sesuai satuan KPI: bilangan bulat untuk satuan dan persen yang valid.';return;}
-    const filled=inputs.filter(input=>input.value.trim());
+    const filled=inputs.filter(input=>input.value.trim()||input.documentTitle.value.trim());
+    if(filled.some(input=>!input.documentTitle.value.trim())){detailError.textContent='Isi judul untuk setiap dokumen.';return;}
     if(!filled.length){error.textContent='Tambahkan minimal satu tautan dokumen sebelum Submit Realisasi.';return;}
     if(filled.some(input=>!safeURL(input.value.trim()))){(sendRevision?error:detailError).textContent='Gunakan tautan HTTP atau HTTPS yang valid.';return;}
-    const measurement={a:baseline&&baseline.value!==''?Number(baseline.value):null,b:measured&&measured.value!==''?Number(measured.value):null},resultY=current().year||'2026';
+    const measurement={a:baseline&&baseline.value!==''?Number(baseline.value):null,b:measured&&measured.value!==''?Number(measured.value):null},resultY=current().year||periodYear();
     if([measurement.a,measurement.b].some(v=>v!=null&&(!Number.isFinite(v)||v<0))){detailError.textContent='Angka pengukuran harus nol atau lebih.';return;}
-    const oldDocs=documents(),oldRelated=related(),values=filled.map(input=>safeURL(input.value.trim())),changed=values.length!==oldRelated.length||values.some((url,i)=>url!==oldRelated[i]?.url)||realization!==(current().realization??null)||current().realizationUnit!==(percent?'%':'count')||(targetResult&&JSON.stringify(measurement)!==JSON.stringify(current().kpiMeasurement||{a:null,b:null}));
+    const oldDocs=documents(),oldRelated=related(),values=filled.map(input=>safeURL(input.value.trim())),changed=values.length!==oldRelated.length||values.some((url,i)=>url!==oldRelated[i]?.url||filled[i].documentTitle.value.trim()!==oldRelated[i]?.judul)||realization!==(current().realization??null)||current().realizationUnit!==(percent?'%':'count')||(targetResult&&JSON.stringify(measurement)!==JSON.stringify(current().kpiMeasurement||{a:null,b:null}));
     const requestReview=true,now=new Date().toISOString(),nextDocs=oldDocs.filter(doc=>!oldRelated.some(old=>old.id===doc.id));
-    values.forEach((url,i)=>{const previous=oldRelated[i];nextDocs.push(audit({...previous,id:previous?.id||crypto.randomUUID(),judul:previous?.judul||d.title+' - Dokumen '+(i+1),url,activityId:d.id,aktivitas:d.id,aktivitasJudul:d.title,flagship:d.flag,strategi:strategy[d.flag]||'',kode:d.code,divisi:d.division,tahun:d.year||'2026',periode:previous?.periode||'Tahunan',jenis:previous?.jenis||'Bukti aktivitas',catatan:text||current().detailNote||'',uploadedBy:previous?.uploadedBy||identity(),uploadedAt:previous?.uploadedAt||now,reviewStatus:requestReview?'Menunggu approval BOD':requiresRevision()?'Perlu revisi':previous?.reviewStatus,reviewer:requestReview?null:previous?.reviewer,approvedAt:requestReview?null:previous?.approvedAt},sendRevision?'Mengirim revisi':'Menyimpan dokumen aktivitas'));});
+    values.forEach((url,i)=>{const previous=oldRelated[i];nextDocs.push(audit({...previous,id:previous?.id||crypto.randomUUID(),judul:filled[i].documentTitle.value.trim(),url,activityId:d.id,aktivitas:d.id,aktivitasJudul:d.title,flagship:d.flag,strategi:strategy[d.flag]||'',kode:d.code,divisi:d.division,tahun:d.year||periodYear(),periode:previous?.periode||'Tahunan',jenis:previous?.jenis||'Bukti aktivitas',catatan:text||current().detailNote||'',uploadedBy:previous?.uploadedBy||identity(),uploadedAt:previous?.uploadedAt||now,reviewStatus:requestReview?'Menunggu approval BOD':requiresRevision()?'Perlu revisi':previous?.reviewStatus,reviewer:requestReview?null:previous?.reviewer,approvedAt:requestReview?null:previous?.approvedAt},sendRevision?'Mengirim revisi':'Menyimpan dokumen aktivitas'));});
     const next=audit({...current(),detailNote:text||current().detailNote||"",kpiFulfilled:false,realization,realizationUnit:percent?'%':'count',kpiMeasurement:measurement,activityReviewStatus:requestReview?'Menunggu persetujuan':review(),reviewRequestedAt:requestReview?now:current().reviewRequestedAt,activityReviewedAt:requestReview?null:current().activityReviewedAt,bodNotification:requestReview&&values.length?{kind:sendRevision?'revision_submitted':'documents_received',at:now,readAt:null}:current().bodNotification,comments:text?[...messages(),{id:crypto.randomUUID(),...identity(),authorId:account().id||null,actor:account().name,text,kind:sendRevision?'revision_submission':'realization_submission',time:now,replyTo:null}]:messages()},sendRevision?'Mengirim catatan dan revisi':'Menyimpan detail aktivitas');
     const oldKpi=window.KPISystem.load(),transition=window.KPISystem.activityResult(oldKpi,next,{status:requiresRevision()&&!sendRevision?'revision':'pending',year:resultY,...measurement,evidence:values,note:text||current().detailNote||'',actor:identity()});
     if(!save(docsKey,nextDocs))return;if((requestReview||changed)&&!window.KPISystem.persist(transition.state)){save(docsKey,oldDocs);detailError.textContent='Data KPI gagal disimpan.';return;}
@@ -332,39 +347,25 @@
     detailError.textContent='';error.textContent='';
     notice.textContent=sendRevision?'Perbaikan realisasi dikirim kembali ke BOD.':'Realisasi dan catatan dikirim ke BOD.';details(next);
    }
-   form.append(node('h3',editable?'Riwayat Komentar':'Catatan','role-detail-comments-title'));
-   const feed=node('div',undefined,'role-chat-feed');feed.setAttribute('role','log');feed.setAttribute('aria-label','Catatan aktivitas');form.append(feed);
-   const interactive=['bod','manajer'].includes(role);
-   let comment,send,error,revisionSend,revisionGuide;
+   const notesSection=activityNotes(current());form.append(notesSection);
+   let comment,error;
    const messages=()=>((items.find(i=>i.id===d.id)?.comments)||[]).map((c,index)=>({...c,id:c.id||`comment-${d.id}-${index}`}));
-   function renderChat(){
-    feed.replaceChildren();const list=editable?[...(current().reviewHistory||[]),...messages().filter(c=>!c.deleted&&!(current().reviewHistory||[]).some(h=>h.id===c.id))].sort((a,b)=>(Date.parse(b.time)||0)-(Date.parse(a.time)||0)):messages().filter(c=>!c.deleted);
-    const legacy=current().detailNote?.trim();
-    if(legacy&&!list.some(c=>c.text===legacy))feed.append(node('p',legacy,'role-detail-legacy-note'));
-    if(!list.length&&!legacy)feed.append(node('p',editable?'Belum ada riwayat komentar.':'Belum ada catatan.','role-note'));
-    list.forEach(c=>{
-     const message=node('article',undefined,'role-chat-message'),avatar=node('span',(c.name||c.actor||'?').split(' ').map(x=>x[0]).slice(0,2).join(''),'role-chat-avatar'),content=node('div',undefined,'role-chat-content'),head=node('div',undefined,'role-chat-message-head');
-     head.append(node('strong',c.name||c.actor||'Pengguna'),node('span',c.role||(/BOD/.test(c.actor)?'BOD':'Manajer Program'),'role-chat-role'),node('time',new Date(c.time).toLocaleString('id-ID'),'role-chat-time'));
-     if(editable&&c.decision){const badge=node('span',c.decision,'role-bod-history-status');badge.dataset.decision=c.decision;head.append(badge);}content.append(head,node('p',c.text||'Disetujui tanpa catatan tambahan.','role-chat-text'));message.dataset.commentId=c.id;message.append(avatar,content);feed.append(message);
-    });feed.scrollTop=editable?0:feed.scrollHeight;
-   }
    if(editable){
     const container=node('section',undefined,'role-manager-submitted');
-    const submittedNodes=[...form.children].filter(el=>el!==detailError&&el!==controls&&el!==feed&&!el.classList.contains('role-detail-comments-title'));
+    const submittedNodes=[...form.children].filter(el=>el!==detailError&&el!==controls&&el!==notesSection);
     submittedNodes.forEach(el=>container.append(el));form.prepend(container);
-    const composer=node('div',undefined,'role-manager-composer');
-    comment=field(composer,'Catatan / Penjelasan','',null,'textarea',false);comment.placeholder='Tuliskan catatan realisasi atau penjelasan perbaikan...';
+    const composer=node('div',undefined,'role-manager-composer');composer.append(notesSection);
+    comment=field(composer,'Catatan','',null,'textarea',false);comment.placeholder='Tuliskan catatan realisasi atau penjelasan perbaikan...';comment.parentElement.querySelector('label').classList.add('sr-only');
     const hint=node('p',requiresRevision()?'Pengajuan ini perlu revisi. Jelaskan perbaikannya, lalu Submit Realisasi untuk mengirim ulang ke BOD.':'Submit Realisasi mengirim nilai, dokumen, dan catatan sekaligus ke BOD.','role-note');
     error=node('p','','role-error');error.setAttribute('role','alert');comment.required=requiresRevision();comment.oninput=()=>{error.textContent='';comment.removeAttribute('aria-invalid');};
     controls.className='role-bod-submit-actions';controls.append(button('Submit Realisasi',()=>persistDetails(requiresRevision()),true));
     composer.append(hint,detailError,error,controls);container.after(composer);
    }else form.append(node('p','Akses lihat · Catatan hanya dapat ditambahkan oleh BOD dan Manager.','role-note'));
-   renderChat();
   }
 
   function commentReaderKey(){return role+':'+(account().id||account().name);}
   function incomingComment(c){if(c.deleted||!c.text?.trim()||!['bod','manajer'].includes(role))return false;const sender=c.role||(/BOD/.test(c.actor)?'BOD':'Manajer Program');return (role==='bod'?sender==='Manajer Program':sender==='BOD')&&!(c.authorId&&account().id&&c.authorId===account().id);}
-  function readActivityComments(d){const key=commentReaderKey();if(!(d.comments||[]).some(c=>incomingComment(c)&&!c.readBy?.[key]))return null;const now=new Date().toISOString();return {...d,comments:d.comments.map(c=>incomingComment(c)&&!c.readBy?.[key]?{...c,readBy:{...c.readBy,[key]:now}}:c)};}
+  function readActivityComments(d){if(periodReadOnly())return null;const key=commentReaderKey();if(!(d.comments||[]).some(c=>incomingComment(c)&&!c.readBy?.[key]))return null;const now=new Date().toISOString();return {...d,comments:d.comments.map(c=>incomingComment(c)&&!c.readBy?.[key]?{...c,readBy:{...c.readBy,[key]:now}}:c)};}
   const commentNotifications=()=>items.filter(d=>!d.deleted).flatMap(d=>(d.comments||[]).map((c,i)=>({...c,id:c.id||`comment-${d.id}-${i}`,activity:d,unread:!c.readBy?.[commentReaderKey()]})).filter(incomingComment)).sort((a,b)=>(Date.parse(b.time)||0)-(Date.parse(a.time)||0));
   const notificationDocuments=d=>documents().filter(doc=>doc.activityId===d.id||(!doc.activityId&&doc.flagship===d.flag&&doc.kode===d.code));
   const notificationFor=d=>d.bodNotification||{kind:'documents_received',at:d.reviewRequestedAt||notificationDocuments(d)[0]?.uploadedAt||'',readAt:null};
@@ -382,7 +383,7 @@
   function saveSubtasks(next){if(!save('seamolec-role-subtasks-v1',next))return false;subtasks=next;render();return true;}
   function editSubtask(s){if(!ownsSubtask(s))return;const form=popup('Edit subtask'),creator=field(form,'Nama',s.creator.name+' - '+s.creator.role),parent=field(form,'Aktivitas induk',s.parent,items.filter(d=>!d.deleted).map(d=>({value:d.id,label:d.flag+' · '+d.code+' — '+d.title}))),title=field(form,'Judul subtask',s.title),due=field(form,'Tenggat',s.due,null,'date');creator.readOnly=true;parent.disabled=true;actions(form,'Simpan subtask',()=>saveSubtasks(subtasks.map(x=>x.id===s.id?audit({...x,title:title.value,due:due.value},'Mengedit subtask'):x)),['staf']);}
   function deleteSubtask(s){if(!ownsSubtask(s))return;const form=popup('Hapus subtask?');form.append(node('p',s.title));actions(form,'Hapus subtask',()=>saveSubtasks(subtasks.filter(x=>x.id!==s.id)),['staf']);form.querySelector('.tombol-utama').classList.add('role-danger-fill');}
-  function addSubtask(parent=null){if(role!=='staf')return;const form=popup('Tambah subtask'),sel=field(form,'Aktivitas induk',parent?.id||'activity-3',items.filter(d=>!d.deleted).map(d=>({value:d.id,label:`${d.flag} · ${d.code} — ${d.title}`}))),title=field(form,'Judul subtask',''),creator=field(form,'Nama',staffIdentity().name+' - '+staffIdentity().role),due=field(form,'Tenggat','',null,'date');creator.readOnly=true;dialog.dataset.parent=sel.value;sel.onchange=()=>dialog.dataset.parent=sel.value;actions(form,'Simpan subtask',()=>{const next=[...subtasks,{id:crypto.randomUUID(),parent:sel.value,title:title.value,owner:'Staf',ownerName:account().name,creator:staffIdentity(),due:due.value,status:'Belum mulai'}];if(!save('seamolec-role-subtasks-v1',next))return false;subtasks=next;expanded.add(sel.value);render();},['staf']);}
+  function addSubtask(parent=null){if(role!=='staf'||periodReadOnly())return;const form=popup('Tambah subtask'),sel=field(form,'Aktivitas induk',parent?.id||'activity-3',items.filter(d=>!d.deleted).map(d=>({value:d.id,label:`${d.flag} · ${d.code} — ${d.title}`}))),title=field(form,'Judul subtask',''),creator=field(form,'Nama',staffIdentity().name+' - '+staffIdentity().role),due=field(form,'Tenggat','',null,'date');creator.readOnly=true;dialog.dataset.parent=sel.value;sel.onchange=()=>dialog.dataset.parent=sel.value;actions(form,'Simpan subtask',()=>{const next=[...subtasks,{id:crypto.randomUUID(),parent:sel.value,title:title.value,owner:'Staf',ownerName:account().name,creator:staffIdentity(),due:due.value,status:'Belum mulai'}];if(!save('seamolec-role-subtasks-v1',next))return false;subtasks=next;expanded.add(sel.value);render();},['staf']);}
 
   function removeActivity(d){if(!canManageActivity(d))return;const form=popup('Hapus aktivitas?');form.append(node('p',d.flag+' · '+d.code+' — '+d.title),node('p','Aktivitas dan subtask disembunyikan dari daftar. Dokumen asli tidak dihapus.','role-note'));actions(form,'Hapus aktivitas',()=>commit(items.map(i=>i.id===d.id?audit({...i,deleted:true},'Menghapus aktivitas'):i)),['manajer','staf']);form.querySelector('.tombol-utama').classList.add('role-danger-fill');}
   function render(){
@@ -395,7 +396,7 @@
 
    while(radios.length<pages){const i=radios.length,r=node('input');r.type='radio';r.name='aktivitas-page';r.className='sr-only';r.id='aktivitas-page-'+(i+1);r.onchange=()=>{page=i+1;render();};$('tabel-bungkus').before(r);const label=node('label',String(i+1),'aktivitas-page-label');label.htmlFor=r.id;screen.querySelector('.aktivitas-pagination label').parentElement.append(label);radios.push(r);}
 
-   page=Math.min(page,pages);table.classList.toggle('role-manager-table',['manajer','staf'].includes(role));body.replaceChildren();const head=table.tHead.rows[0];head.querySelector('.role-actions-head')?.remove();if(['manajer','staf'].includes(role))head.append(node('th','AKSI','role-actions-head'));
+   page=Math.min(page,pages);table.classList.toggle('role-manager-table',['manajer','staf'].includes(role)&&!periodReadOnly());body.replaceChildren();const head=table.tHead.rows[0];head.querySelector('.role-actions-head')?.remove();if(['manajer','staf'].includes(role)&&!periodReadOnly())head.append(node('th','AKSI','role-actions-head'));
 
    matches.slice((page-1)*10,page*10).forEach(d=>{let row=originalRows.get(d.id)?.cloneNode(true);if(!row){row=node('tr');for(let i=0;i<10;i++)row.append(node('td'));}row.dataset.activityId=d.id;if(['Perlu perhatian','Ditunda'].includes(d.status))row.dataset.risiko='';else delete row.dataset.risiko;
 
@@ -405,15 +406,15 @@
 
     const tools=node('div',undefined,'role-row-tools');const toggle=link('',()=>{expanded.has(d.id)?expanded.delete(d.id):expanded.add(d.id);render();});toggle.classList.add('role-subtask-toggle');toggle.setAttribute('aria-label','See Subtask ('+subtasks.filter(s=>s.parent===d.id).length+')');toggle.setAttribute('aria-expanded',String(expanded.has(d.id)));toggle.append(node('span',expanded.has(d.id)?'⌃':'⌄','role-subtask-arrow'),node('span','See Subtask ('+subtasks.filter(s=>s.parent===d.id).length+')'));tools.append(toggle);
 
-    if(role==='manajer'){if(d.submission==='Menunggu verifikasi Manager')tools.append(link('Verifikasi progres',()=>{if(role!=='manajer')return;commit(items.map(i=>i.id===d.id?audit({...i,status:i.proposedStatus||i.status,submission:'Progres tervalidasi'},'Manager memverifikasi progres'):i));}));}if(role==='staf')tools.append(link('+ Subtask',()=>addSubtask(d)));row.cells[4].append(tools);const detailTools=node('div',undefined,'role-detail-tools');detailTools.append(icon('details','Detail / komentar: '+d.title,()=>details(d)),activityReviewIndicator(d));row.cells[9].replaceChildren(node('span',[...(d.comments||[])].reverse().find(c=>!c.deleted)?.text||(d.note||'\u2014'),'role-comment-preview'),detailTools);if(d.submission)row.cells[9].append(node('span',d.submission,'role-status'));if(canManageActivity(d)){const statusWrap=node('div',undefined,'role-inline-status'),select=node('select',undefined,'role-status-select');['Belum mulai','On track','Perlu perhatian','Selesai','Ditunda'].forEach(v=>select.add(new Option(v,v)));select.value=d.status;select.setAttribute('aria-label','Ubah status '+d.title);select.onchange=()=>{if(!canManageActivity(d))return;commit(items.map(i=>i.id===d.id?audit({...i,status:select.value},'Mengubah status menjadi '+select.value):i));};statusWrap.append(badge(d.status),node('span','⌄','role-status-chevron'),select);row.cells[8].replaceChildren(statusWrap);const cell=node('td',undefined,'role-actions-cell');const actionGroup=node('div',undefined,'role-actions-group');actionGroup.append(icon('edit','Edit aktivitas '+d.title,()=>editor(d)),icon('delete','Hapus aktivitas '+d.title,()=>removeActivity(d)));cell.append(actionGroup);row.append(cell);}else if(role==='staf')row.append(node('td',undefined,'role-actions-cell'));body.append(row);
+    if(role==='manajer'){if(d.submission==='Menunggu verifikasi Manager')tools.append(link('Verifikasi progres',()=>{if(role!=='manajer')return;commit(items.map(i=>i.id===d.id?audit({...i,status:i.proposedStatus||i.status,submission:'Progres tervalidasi'},'Manager memverifikasi progres'):i));}));}if(role==='staf'&&!periodReadOnly())tools.append(link('+ Subtask',()=>addSubtask(d)));row.cells[4].append(tools);const detailTools=node('div',undefined,'role-detail-tools');detailTools.append(icon('details','Detail / komentar: '+d.title,()=>details(d)),activityReviewIndicator(d));row.cells[9].replaceChildren(node('span',[...(d.comments||[])].reverse().find(c=>!c.deleted)?.text||(d.note||'\u2014'),'role-comment-preview'),detailTools);if(d.submission)row.cells[9].append(node('span',d.submission,'role-status'));if(canManageActivity(d)){const statusWrap=node('div',undefined,'role-inline-status'),select=node('select',undefined,'role-status-select');['Belum mulai','On track','Perlu perhatian','Selesai','Ditunda'].forEach(v=>select.add(new Option(v,v)));select.value=d.status;select.setAttribute('aria-label','Ubah status '+d.title);select.onchange=()=>{if(!canManageActivity(d))return;commit(items.map(i=>i.id===d.id?audit({...i,status:select.value},'Mengubah status menjadi '+select.value):i));};statusWrap.append(badge(d.status),node('span','⌄','role-status-chevron'),select);row.cells[8].replaceChildren(statusWrap);const cell=node('td',undefined,'role-actions-cell');const actionGroup=node('div',undefined,'role-actions-group');actionGroup.append(icon('edit','Edit aktivitas '+d.title,()=>editor(d)),icon('delete','Hapus aktivitas '+d.title,()=>removeActivity(d)));cell.append(actionGroup);row.append(cell);}else if(role==='staf'&&!periodReadOnly())row.append(node('td',undefined,'role-actions-cell'));body.append(row);
 
-    if(expanded.has(d.id)){const subrow=node('tr',undefined,'role-subtasks'),cell=node('td');cell.colSpan=['manajer','staf'].includes(role)?11:10;const list=subtasks.filter(s=>s.parent===d.id);if(!list.length)cell.append(node('span','Belum ada subtask.','role-note'));list.forEach(s=>{const line=node('div',undefined,'role-subtask-line');line.append(node('span','↳ '+s.title),node('span',s.creator.name+' - '+s.creator.role),node('span',s.due));if(ownsSubtask(s)){const wrap=node('div',undefined,'role-inline-status'),select=node('select',undefined,'role-status-select');['Belum mulai','On track','Perlu perhatian','Selesai','Ditunda'].forEach(v=>select.add(new Option(v,v)));select.value=s.status;select.setAttribute('aria-label','Ubah status subtask '+s.title);select.onchange=()=>{if(!ownsSubtask(s))return;saveSubtasks(subtasks.map(x=>x.id===s.id?audit({...x,status:select.value},'Mengubah status subtask'):x));};wrap.append(badge(s.status),node('span','⌄','role-status-chevron'),select);line.append(wrap);}else line.append(badge(s.status));const tools=node('div',undefined,'role-actions-group');if(ownsSubtask(s))tools.append(icon('edit','Edit subtask '+s.title,()=>editSubtask(s)),icon('delete','Hapus subtask '+s.title,()=>deleteSubtask(s)));line.append(tools);cell.append(line);});subrow.append(cell);body.append(subrow);}
+    if(expanded.has(d.id)){const subrow=node('tr',undefined,'role-subtasks'),cell=node('td');cell.colSpan=['manajer','staf'].includes(role)&&!periodReadOnly()?11:10;const list=subtasks.filter(s=>s.parent===d.id);if(!list.length)cell.append(node('span','Belum ada subtask.','role-note'));list.forEach(s=>{const line=node('div',undefined,'role-subtask-line');line.append(node('span','↳ '+s.title),node('span',s.creator.name+' - '+s.creator.role),node('span',s.due));if(ownsSubtask(s)){const wrap=node('div',undefined,'role-inline-status'),select=node('select',undefined,'role-status-select');['Belum mulai','On track','Perlu perhatian','Selesai','Ditunda'].forEach(v=>select.add(new Option(v,v)));select.value=s.status;select.setAttribute('aria-label','Ubah status subtask '+s.title);select.onchange=()=>{if(!ownsSubtask(s))return;saveSubtasks(subtasks.map(x=>x.id===s.id?audit({...x,status:select.value},'Mengubah status subtask'):x));};wrap.append(badge(s.status),node('span','⌄','role-status-chevron'),select);line.append(wrap);}else line.append(badge(s.status));const tools=node('div',undefined,'role-actions-group');if(ownsSubtask(s))tools.append(icon('edit','Edit subtask '+s.title,()=>editSubtask(s)),icon('delete','Hapus subtask '+s.title,()=>deleteSubtask(s)));line.append(tools);cell.append(line);});subrow.append(cell);body.append(subrow);}
 
    });
 
    radios.forEach((r,i)=>{r.checked=i+1===page;r.disabled=i>=pages;screen.querySelector(`label[for="${r.id}"]`).hidden=i>=pages;});$('filter-hitung').textContent=`Menampilkan ${matches.length} dari ${items.filter(d=>!d.deleted).length} aktivitas`;screen.querySelector('.aktivitas-pagination p').textContent=matches.length?`${(page-1)*10+1}–${Math.min(page*10,matches.length)} dari ${matches.length} aktivitas`:'0 aktivitas';$('tabel-bungkus').hidden=!matches.length;$('hasil-kosong').hidden=!!matches.length;
 
-   roleButtons.replaceChildren();if(role==='bod')roleButtons.append(button('Kelola flagship',manageFlags));if(role==='manajer')roleButtons.append(button('Tambah aktivitas',()=>editor(),true));if(role==='staf')roleButtons.append(button('Tambah subtask',()=>addSubtask()),button('Tambah aktivitas',()=>editor(),true));
+   roleButtons.replaceChildren();if(role==='bod'&&!periodReadOnly())roleButtons.append(button('Kelola flagship',manageFlags));if(role==='manajer'&&!periodReadOnly())roleButtons.append(button('Tambah aktivitas',()=>editor(),true));if(role==='staf'&&!periodReadOnly())roleButtons.append(button('Tambah subtask',()=>addSubtask()),button('Tambah aktivitas',()=>editor(),true));
 
   }
 
@@ -428,7 +429,7 @@
   window.renderRolePage=window.mountKPI({screen,$,node,button,link,badge,field,popup,actions,roleButtons,notice,csv,manageFlags,identity,safeURL,flags,read,role:()=>role});
  }
 
- function changeRole(){dialog.close();role=selector.value;notice.textContent=role==='staf'?'Akses lihat'+(activity?' · Kelola aktivitas buatan sendiri dan subtask; komentar hanya lihat.':'.'):role==='pic'?'Penugasan contoh: '+account().name+' · '+(activity?'Akses lihat aktivitas; upload dokumen dinonaktifkan.':'Akses lihat KPI; update bukti dilakukan melalui Aktivitas.'):role==='bod'?'BOD · Kelola flagship, KPI, dan persetujuan dokumen.':'Manajer Program · '+(activity?'Kelola aktivitas dan verifikasi dokumen.':'Pantau realisasi dan ajukan target tahunan kepada BOD.');window.renderRolePage();updateInbox();}
+ function changeRole(){dialog.close();role=selector.value;notice.textContent=role==='staf'?'Akses lihat'+(activity?' · Kelola aktivitas buatan sendiri dan subtask; komentar hanya lihat.':'.'):role==='pic'?'Penugasan contoh: '+account().name+' · '+(activity?'Akses lihat aktivitas; upload dokumen dinonaktifkan.':'Akses lihat KPI; update bukti dilakukan melalui Aktivitas.'):role==='bod'?'BOD · Kelola flagship, KPI, dan persetujuan dokumen.':'Manajer Program · '+(activity?'Kelola aktivitas dan verifikasi dokumen.':'Pantau realisasi dan ajukan target tahunan kepada BOD.');if(periodReadOnly())notice.textContent='Arsip '+window.FYDP.period.name+' · Akses lihat dan ekspor; perubahan dinonaktifkan.';window.renderRolePage();updateInbox();}
 
  selector.onchange=changeRole;changeRole();
 

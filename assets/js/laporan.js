@@ -3,7 +3,7 @@
   const screen = document.getElementById('layar-laporan');
   if (!screen) return;
   const $ = id => document.getElementById(id);
-  const readLocal=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}};
+  const readLocal=(key,fallback)=>{try{return JSON.parse((window.FYDP?.storage||localStorage).getItem(key))??fallback;}catch{return fallback;}};
   let activityRecords=readLocal('seamolec-role-activities-v1',{});
   const savedPrograms=readLocal('seamolec-role-flagships-v1',[]);
   const catalog = [...(window.ReportActivities || []),...Object.values(activityRecords).filter(d=>d?.flag&&d?.code).map(d=>({id:d.id,flagship:d.flag,kode:d.code,divisi:d.division,judul:d.title,tahun:d.year||'2026'}))];
@@ -45,28 +45,28 @@
   filterCodes();
   let docs = [], page = 1, editing = null, deleting = null, selectedId = null, storageError = '';
   try {
-    const saved = JSON.parse(localStorage.getItem(key) || '[]');
+    const saved = JSON.parse((window.FYDP?.storage||localStorage).getItem(key) || '[]');
     if (!Array.isArray(saved)) throw new Error('Invalid data');
-    docs = saved.filter(d => d && typeof d.id === 'string' && typeof d.judul === 'string' && safeURL(d.url) && types.includes(d.jenis) && /^(202[5-9])$/.test(d.tahun) && (!d.flagship || flags.includes(d.flagship)) && divisions.includes(d.divisi) && (!d.kode || codes(d.flagship).includes(d.kode)) && ['Tahunan','Q1','Q2','Q3','Q4','Semester 1','Semester 2'].includes(d.periode));
+    docs = saved.filter(d => d && typeof d.id === 'string' && typeof d.judul === 'string' && safeURL(d.url) && types.includes(d.jenis) && (window.FYDP?.years||['2025','2026','2027','2028','2029']).includes(String(d.tahun)) && (!d.flagship || flags.includes(d.flagship)) && divisions.includes(d.divisi) && (!d.kode || codes(d.flagship).includes(d.kode)) && ['Tahunan','Q1','Q2','Q3','Q4','Semester 1','Semester 2'].includes(d.periode));
     docs = docs.map(d => ({...d, strategi: strategyMap[d.flagship] || (strategies.includes(d.strategi) ? d.strategi : '')}));
     if (docs.length !== saved.length) storageError = 'Sebagian data tersimpan tidak valid dan tidak ditampilkan.';
   } catch { storageError = 'Penyimpanan browser tidak tersedia atau data tersimpan tidak dapat dibaca. Data lama tidak ditimpa.'; }
   // Add examples once per browser, without replacing user documents or resurrecting deleted samples.
   const seedKey = key + '-examples-v1';
-  if (storageError && !docs.length) docs = (window.ReportSamples || []).map(d=>({...d}));
+  if (storageError && !docs.length) docs = (window.FYDP&&!window.FYDP.isLegacy?[]:(window.ReportSamples || [])).map(d=>({...d}));
   try {
-    if (!localStorage.getItem(seedKey) && !storageError) {
+    if (!window.FYDP?.readOnly && !(window.FYDP?.storage||localStorage).getItem(seedKey) && !storageError) {
       const ids = new Set(docs.map(d=>d.id));
-      docs = docs.concat((window.ReportSamples || []).filter(d=>!ids.has(d.id)).map(d=>({...d})));
-      localStorage.setItem(key, JSON.stringify(docs));
-      localStorage.setItem(seedKey, '1');
+      docs = docs.concat((window.FYDP&&!window.FYDP.isLegacy?[]:(window.ReportSamples || [])).filter(d=>!ids.has(d.id)).map(d=>({...d})));
+      (window.FYDP?.storage||localStorage).setItem(key, JSON.stringify(docs));
+      (window.FYDP?.storage||localStorage).setItem(seedKey, '1');
     }
   } catch {
-    if (!docs.length) docs = (window.ReportSamples || []).map(d=>({...d}));
+    if (!docs.length) docs = (window.FYDP&&!window.FYDP.isLegacy?[]:(window.ReportSamples || [])).map(d=>({...d}));
     storageError = 'Dokumen contoh ditampilkan; penyimpanan browser tidak tersedia. Perubahan tidak dapat disimpan.';
   }
-  function persist(next) {
-    try { if (storageError) throw new Error(); localStorage.setItem(key, JSON.stringify(next)); docs = next; return true; }
+  function persist(next) {if(window.FYDP?.readOnly)return false;
+    try { if (storageError) throw new Error(); (window.FYDP?.storage||localStorage).setItem(key, JSON.stringify(next)); docs = next; return true; }
     catch { $('lap-notice').textContent = 'Perubahan belum disimpan: penyimpanan browser tidak tersedia. Coba browser biasa dengan penyimpanan lokal aktif.'; return false; }
   }
   function approved(d) {
@@ -184,7 +184,7 @@
     if (!periods.includes(d.periode) || (d.strategi && !strategies.includes(d.strategi))) return error('Pilih periode dan kode strategi yang valid.');
     if (!safeURL(d.url) || (d.cover && !safeURL(d.cover))) return error('Gunakan tautan http atau https yang valid, tanpa username atau password.');
     if (d.kode && !d.flagship) return error('Pilih flagship untuk dokumen dengan kode aktivitas tertentu.');
-    if (!types.includes(d.jenis) || !divisions.includes(d.divisi) || !/^(202[5-9])$/.test(d.tahun)) return error('Lengkapi jenis, divisi, dan tahun yang sesuai.');
+    if (!types.includes(d.jenis) || !divisions.includes(d.divisi) || !(window.FYDP?.years||['2025','2026','2027','2028','2029']).includes(String(d.tahun))) return error('Lengkapi jenis, divisi, dan tahun yang sesuai.');
     const related = catalog.find(a=>String(a.id)===d.aktivitas);
     if (related && (related.flagship!==d.flagship || related.kode!==d.kode)) return error('Aktivitas tidak sesuai dengan flagship dan kode yang dipilih.');
     d.url = safeURL(d.url); d.cover = d.cover ? safeURL(d.cover) : '';
@@ -213,7 +213,7 @@
     return '';
   }
   function cover(d) {
-    const card=node('div',undefined,'laporan-cover'); card.append(node('small','SEAMOLEC · FYDP 2025–2029'),node('small',d.jenis),node('h3',d.judul),node('p',`${d.flagship || 'Lintas flagship'} · ${d.strategi || 'Strategi umum'} · ${d.kode || 'Umum'}\n${d.tahun} · ${d.periode}`)); return card;
+    const card=node('div',undefined,'laporan-cover'); card.append(node('small','SEAMOLEC · '+(window.FYDP?.period.name||'FYDP 2025–2029')),node('small',d.jenis),node('h3',d.judul),node('p',`${d.flagship || 'Lintas flagship'} · ${d.strategi || 'Strategi umum'} · ${d.kode || 'Umum'}\n${d.tahun} · ${d.periode}`)); return card;
   }
   function showPreview(d, live = true) {
     selectedId = d.id;

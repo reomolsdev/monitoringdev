@@ -33,6 +33,28 @@
 #layar-kpi .kk-year .urut-tombol { justify-content:flex-end; }
 #layar-kpi td.kk-year { font-size:12px; line-height:1.6; }
 #layar-kpi .kk-year.is-selected-year { background:#f0f6fd; }
+/* Main view: five compact annual columns and a combined status/achievement. */
+body:not(.kpi-reference-page) #layar-kpi .tabel-kpi { min-width:0; width:100%; table-layout:fixed; }
+body:not(.kpi-reference-page) #layar-kpi .kk-kat { width:7%; }
+body:not(.kpi-reference-page) #layar-kpi .kk-prog { width:12%; }
+body:not(.kpi-reference-page) #layar-kpi .kk-rumus { min-width:0; width:33%; }
+body:not(.kpi-reference-page) #layar-kpi .kk-year { width:7%; text-align:center; }
+body:not(.kpi-reference-page) #layar-kpi .kk-year .urut-tombol { justify-content:center; }
+body:not(.kpi-reference-page) #layar-kpi .kk-stat { width:13%; }
+body:not(.kpi-reference-page) #layar-kpi td.kk-year,
+body:not(.kpi-reference-page) #layar-kpi .kk-year .urut-tombol { padding-left:6px; padding-right:6px; }
+body:not(.kpi-reference-page) #layar-kpi .kk-stat .pill { max-width:100%; white-space:normal; }
+.kpi-status-achievement { display:block; margin-top:6px; font-size:13px; font-variant-numeric:tabular-nums; }
+.kpi-achievement-bar { margin-top:8px; width:100%; max-width:140px; height:6px; }
+#layar-kpi .kpi-annual-edit { display:flex; align-items:center; margin-top:8px; padding:0 7px; min-height:28px; height:auto; font-size:11px; line-height:1.4; color:var(--biru); white-space:normal; max-width:100%; }
+@media(max-width:1100px) {
+ body:not(.kpi-reference-page) #layar-kpi .kk-kat { width:60px; }
+ body:not(.kpi-reference-page) #layar-kpi .kk-prog { width:95px; }
+ body:not(.kpi-reference-page) #layar-kpi .kk-rumus { width:auto; }
+ body:not(.kpi-reference-page) #layar-kpi .kk-year { width:50px; }
+ body:not(.kpi-reference-page) #layar-kpi .kk-stat { width:140px; }
+ body:not(.kpi-reference-page) #layar-kpi .tabel-kpi td { padding-left:8px; padding-right:8px; }
+}
 .kpi-row-toggle { display:flex; align-items:center; gap:8px; margin-top:12px; min-height:28px; }
 .kpi-row-toggle .role-subtask-arrow { margin-right:6px; }
 #layar-kpi .kpi-collapsed-row[hidden] { display:none; }

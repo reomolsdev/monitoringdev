@@ -1,0 +1,32 @@
+.fydp-controls { display:flex; align-items:center; gap:8px; }
+.fydp-controls label { font-size:12px; color:var(--teks-redup,#60758b); white-space:nowrap; }
+.fydp-controls select { max-width:240px; min-width:155px; height:36px; font-size:12px; }
+.fydp-banner { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 18px; margin:16px 32px 0; border:1px solid #dbe5ef; border-radius:8px; background:#f4f8fd; }
+.fydp-banner > div { display:grid; gap:4px; }
+.fydp-banner strong { font-size:13px; color:var(--biru,#195da8); }
+.fydp-banner span { font-size:12px; color:var(--teks-redup,#60758b); }
+.fydp-banner.is-archived { background:#fff9ec; border-color:#ebd7a8; }
+.fydp-banner.is-archived strong { color:#875a13; }
+.fydp-banner button { flex-shrink:0; font-size:12px; }
+.fydp-banner [hidden] { display:none!important; }
+.fydp-settings-panel { margin-top:24px; scroll-margin-top:100px; }
+.fydp-settings-panel[hidden] { display:none!important; }
+.fydp-settings-body { display:grid; gap:12px; }
+.fydp-settings-body p { margin:0; }
+.fydp-settings-body > button { justify-self:start; }
+.fydp-archive-button:disabled { opacity:.5; cursor:not-allowed; }
+.fydp-dialog { width:min(680px,calc(100vw - 32px)); }
+.fydp-period-list { display:grid; gap:10px; }
+.fydp-period-card { display:flex; align-items:center; gap:10px; padding:14px; border:1px solid var(--garis,#dce5ee); border-radius:8px; }
+.fydp-period-card > div { flex:1; min-width:0; }
+.fydp-period-card strong { font-size:14px; }
+.fydp-period-card .role-note { margin:6px 0 0; }
+.fydp-period-card button { font-size:12px; }
+.fydp-create-form { display:grid; gap:12px; border-top:1px solid var(--garis,#dce5ee); padding-top:18px; }
+.fydp-create-form h3 { margin:0; font-size:15px; }
+.fydp-create-form > button { justify-self:end; }
+.fydp-dialog input[readonly] { background:#f1f4f8; }
+.fydp-empty { padding:20px; color:var(--teks-redup,#60758b); font-size:13px; }
+.fydp-timeline-empty { padding:20px; margin-bottom:12px; border:1px solid var(--garis,#dce5ee); border-radius:8px; background:white; }
+@media(max-width:1250px){ .header-kanan { gap:10px; flex-wrap:wrap; justify-content:flex-end; } .fydp-controls label { display:none; } .fydp-controls select { max-width:190px; } }
+@media(max-width:700px){ .header { height:auto; min-height:70px; padding-top:12px; padding-bottom:12px; } .fydp-banner { margin:12px 16px 0; padding:12px; align-items:flex-start; flex-wrap:wrap; } .fydp-period-card { flex-wrap:wrap; } .fydp-period-card > div { flex-basis:100%; } .fydp-controls select { min-width:145px; } }

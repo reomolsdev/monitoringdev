@@ -1,7 +1,7 @@
 /* Local prototype: KPI outcomes are distinct from activity completion. */
 (() => {
  'use strict';
- const KEY='seamolec-kpi-outcomes-v2',YEARS=['2025','2026','2027','2028','2029'];
+ const KEY='seamolec-kpi-outcomes-v2',YEARS=window.FYDP?.years||['2025','2026','2027','2028','2029'],LAST=YEARS.at(-1),DEFAULT_YEAR=window.FYDP?.defaultYear()||'2026';
  const canonical=s=>String(s||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase().replace(/[^A-Z0-9]+/g,'-').replace(/^-|-$/g,'');
  const definitions=[
   ['ST1',['PROGRES','ADCEND'],'Negara yang secara formal mengadopsi / menyelaraskan regulasi ODL',5,'negara','count',[0,1,3,4,5],'Ada keputusan adopsi resmi nasional; pelatihan atau platform saja belum dihitung.'],
@@ -15,7 +15,7 @@
   ['SMART-04',['PROGRES'],'Kemitraan strategis formal baru',15,'kemitraan','count',[0,4,8,11,15],'Perjanjian resmi dengan ID kemitraan unik; periksa juga program kolaboratif lintas negara.'],
   ['SMART-05',['R-MODE'],'Peningkatan dana non-inti yang terdiversifikasi',50,'% peningkatan','increase',[0,13,25,38,50],'Dana non-inti periode pengukuran dibandingkan baseline yang disepakati.']
  ];
- function seed(){
+ function seed(){if(window.FYDP&&!window.FYDP.isLegacy)return {version:2,kpis:[],outcomes:[],history:[]};
   const kpis=definitions.map((d,i)=>({id:'kpi-'+(i+1),code:d[0],flags:d[1],indicator:d[2],target:d[3],unit:d[4],method:d[5],annual:Object.fromEntries(YEARS.map((y,j)=>[y,d[6][j]])),criterion:d[7],group:i<5?'strategi':'smart',annualNote:'Contoh distribusi kumulatif. BOD perlu menetapkan angka final.'}));
   const proof='https://www.seamolec.org/';
   const outcomes=[
@@ -26,19 +26,19 @@
   ];
   return {version:2,kpis,outcomes,history:[]};
  }
- function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s?.version===2&&Array.isArray(s.kpis)&&Array.isArray(s.outcomes))return s;}catch{}const s=seed();
+ function load(){try{const s=JSON.parse((window.FYDP?.storage||localStorage).getItem(KEY));if(s?.version===2&&Array.isArray(s.kpis)&&Array.isArray(s.outcomes))return s;}catch{}const s=seed();
   // Keep old data untouched. Legacy manual values require explicit confirmation, never become validated outcomes.
-  try{const old=JSON.parse(localStorage.getItem('seamolec-role-kpis-v1'));if(Array.isArray(old))old.forEach(d=>{const k=s.kpis.find(k=>k.id===d.id);if(k){const scale=k.method==='count'?1:100;if(d.actual!=null)k.legacyActual=d.actual*scale;if(Number.isFinite(d.target)&&d.target>0)k.target=d.target*scale;k.indicator=d.indicator||k.indicator;if(d.annualTargets){Object.entries(d.annualTargets).forEach(([y,v])=>{if(YEARS.includes(y))k.annual[y]=Number(v)*scale;});k.annualConfirmed=true;}k.annual['2029']=k.target;}else if(d.id&&d.indicator){s.kpis.push({id:d.id,code:d.code||'CUSTOM',flags:String(d.program||'').split(' / '),indicator:d.indicator,target:d.target*(String(d.unit).includes('%')?100:1),unit:d.unit,method:String(d.unit).includes('%')?'ratio':'count',annual:{},criterion:'BOD perlu menetapkan patokan hasil KPI ini.',group:d.group||'strategi',legacyActual:d.actual});}});}catch{}
+  try{const old=JSON.parse((window.FYDP?.storage||localStorage).getItem('seamolec-role-kpis-v1'));if(Array.isArray(old))old.forEach(d=>{const k=s.kpis.find(k=>k.id===d.id);if(k){const scale=k.method==='count'?1:100;if(d.actual!=null)k.legacyActual=d.actual*scale;if(Number.isFinite(d.target)&&d.target>0)k.target=d.target*scale;k.indicator=d.indicator||k.indicator;if(d.annualTargets){Object.entries(d.annualTargets).forEach(([y,v])=>{if(YEARS.includes(y))k.annual[y]=Number(v)*scale;});k.annualConfirmed=true;}k.annual[LAST]=k.target;}else if(d.id&&d.indicator){s.kpis.push({id:d.id,code:d.code||'CUSTOM',flags:String(d.program||'').split(' / '),indicator:d.indicator,target:d.target*(String(d.unit).includes('%')?100:1),unit:d.unit,method:String(d.unit).includes('%')?'ratio':'count',annual:{},criterion:'BOD perlu menetapkan patokan hasil KPI ini.',group:d.group||'strategi',legacyActual:d.actual});}});}catch{}
   persist(s);return s;
  }
- function persist(s){try{localStorage.setItem(KEY,JSON.stringify(s));return true;}catch{return false;}}
+ function persist(s){if(window.FYDP?.readOnly)return false;try{(window.FYDP?.storage||localStorage).setItem(KEY,JSON.stringify(s));return true;}catch{return false;}}
  function measurement(k,o){const a=Number(o.a),b=Number(o.b);if(!Number.isFinite(a)||!Number.isFinite(b)||a<=0||b<0)return null;if(k.method==='ratio')return b<=a?b/a*100:null;if(k.method==='decrease')return b<=a?(a-b)/a*100:null;return b>=a?(b-a)/a*100:null;}
- function calculate(s,k,year='2029'){
+ function calculate(s,k,year=LAST){
   const eligible=s.outcomes.filter(o=>o.kpiId===k.id).flatMap(o=>o.claims?[...Object.values(o.claims).filter(c=>c.status==='approved').map(c=>({...o,...c})),...(o.legacyApproval?[{...o,...o.legacyApproval}]:[])]:o.status==='approved'?[o]:[]).filter(o=>Number(o.year)<=Number(year));
   let actual=k.method==='count'?new Set(eligible.map(o=>canonical(o.entity))).size:null;
   if(k.method!=='count'){const latest=eligible.sort((a,b)=>Number(b.year)-Number(a.year)||String(b.approvedAt||'').localeCompare(String(a.approvedAt||'')))[0];if(latest)actual=measurement(k,latest);}
   const override=k.overrides?.[year];if(override)actual=override.value;
-  const target=year==='2029'?k.target:k.annual[year];const ratio=actual==null||target==null||target<=0?null:actual/target;
+  const target=year===LAST?k.target:k.annual[year];const ratio=actual==null||target==null||target<=0?null:actual/target;
   const status=target==null?'Target belum diatur':target===0?'Belum ditargetkan':ratio==null?'Belum ada data':ratio>=1?'Tercapai':ratio>=.7?'On track':'Perlu perhatian';
   return {actual,target,ratio,status,override:!!override};
  }
@@ -79,13 +79,14 @@
  window.KPISystem={KEY,YEARS,COUNTRIES,canonical,load,persist,calculate,measurement,validOutcome,planResult,activityResult};
  window.mountKPI=function(c){
   const {screen,$,node,button,link,badge,field,popup,actions,roleButtons,notice,csv,manageFlags,identity,safeURL}=c;
-  const role=()=>c.role();let s=load(),year='2026',flag='';const expanded=new Set();
+  screen.querySelectorAll('thead tr').forEach(row=>row.querySelectorAll('.kk-year .urut-tombol').forEach((button,i)=>{button.firstChild.textContent=YEARS[i];}));
+  const role=()=>c.role();let s=load(),year=DEFAULT_YEAR,flag='';const expanded=new Set();
   const num=v=>v==null?'—':new Intl.NumberFormat('id-ID',{maximumFractionDigits:2}).format(v);
   const actor=()=>({...identity(),time:new Date().toISOString()});
   function write(action){s.history.push({...actor(),action});if(!persist(s)){s=load();notice.textContent='Perubahan gagal disimpan di browser.';return false;}render();return true;}
   const format=(k,v)=>num(v)+(k.method==='count'?'':'%');
   const withUnit=(k,v)=>v==null?'—':k.method==='count'?num(v)+' '+k.unit:num(v)+'%'+(k.unit.replace(/^\s*%\s*/,'')?' '+k.unit.replace(/^\s*%\s*/,''):'');
-  function edit(k=null){if(role()!=='bod')return;const f=popup(k?'Ubah KPI':'Tambah KPI');f.classList.add('kpi-editor-form');f.parentElement?.classList.add('role-editor-dialog','kpi-editor-dialog');
+  function edit(k=null){if(role()!=='bod'||window.FYDP?.readOnly)return;const f=popup(k?'Ubah KPI':'Tambah KPI');f.classList.add('kpi-editor-form');f.parentElement?.classList.add('role-editor-dialog','kpi-editor-dialog');
    const row=()=>{const r=node('div',undefined,'role-editor-row');f.append(r);return r;};
    const first=row(),code=field(first,'Kode KPI',k?.code||''),flags=field(first,'Flagship',k?.flags.join(', ')||'');
    const selectedFlags=new Set(k?.flags||[]),wrap=flags.parentElement,picker=node('div',undefined,'kpi-flagship-options');
@@ -94,27 +95,31 @@
    const toggle=()=>{picker.hidden=!picker.hidden;flags.setAttribute('aria-expanded',String(!picker.hidden));};flags.onclick=toggle;flags.onkeydown=e=>{if(['Enter',' ','ArrowDown'].includes(e.key)){e.preventDefault();if(picker.hidden)toggle();else if(e.key!=='ArrowDown')toggle();}if(e.key==='Escape'){picker.hidden=true;flags.setAttribute('aria-expanded','false');}};
    c.flags.forEach(name=>{const option=node('label',undefined,'kpi-flagship-option'),check=node('input');check.type='checkbox';check.value=name;check.checked=selectedFlags.has(name);check.onchange=()=>{if(check.checked)selectedFlags.add(name);else selectedFlags.delete(name);flags.value=[...selectedFlags].join(', ');};option.append(check,node('span',name));picker.append(option);});
    const closePicker=()=>{picker.hidden=true;flags.setAttribute('aria-expanded','false');};f.addEventListener?.('click',e=>{if(wrap&&!wrap.contains(e.target))closePicker();});picker.onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();closePicker();flags.focus();}};
-   const title=field(f,'Rumusan indikator',k?.indicator||'',null,'textarea'),calculation=row(),method=field(calculation,'Cara menghitung',k&&k.method!=='count'?'ratio':'count',[{value:'count',label:'Hitung hasil unik'},{value:'ratio',label:'Persentase'}]),unit=field(calculation,'Satuan',k?.unit||'negara'),target=field(f,'Target akhir 2029',k?.target??1,null,'number'),criterion=field(f,'Patokan hasil boleh dihitung',k?.criterion||'',null,'textarea');
+   const title=field(f,'Indikator KPI',k?.indicator||'',null,'textarea'),calculation=row(),method=field(calculation,'Jenis satuan',k&&k.method!=='count'?'ratio':'count',[{value:'count',label:'Satuan'},{value:'ratio',label:'Persentase'}]),unit=field(calculation,'Satuan',k?.unit||'negara'),target=field(f,'Target Akhir',k?.target??1,null,'number');
    // Existing percentage KPI formulas retain their stored calculation when only their metadata is edited.
    const savedMethod=()=>method.value==='ratio'&&k&&k.method!=='count'?k.method:method.value;
    const sync=()=>{target.min=method.value==='count'?'1':'0.000001';target.step=method.value==='count'?'1':'any';};method.onchange=sync;sync();
    f.append(node('p','Persentase diisi dalam angka persen: target 30 berarti 30%. Satu KPI bersama tetap satu indikator, meskipun muncul pada beberapa flagship.','role-note'));
-   actions(f,'Simpan KPI',error=>{const fs=[...selectedFlags];if(!code.value.trim()||!title.value.trim()||!criterion.value.trim()||s.kpis.some(x=>x.id!==k?.id&&x.code===code.value.trim())){error.textContent='Isi kode unik, indikator, dan patokan hasil.';return false;}if(!fs.length||fs.some(v=>!c.flags.includes(v))){error.textContent='Gunakan kode flagship yang tersedia di Kelola flagship.';return false;}if(method.value==='count'&&!Number.isInteger(Number(target.value))){error.textContent='Target satuan harus bilangan bulat.';return false;}if(k&&savedMethod()!==k.method&&s.outcomes.some(o=>o.kpiId===k.id)){error.textContent='Cara menghitung KPI yang sudah memiliki hasil tidak dapat diganti. Buat indikator baru.';return false;}if(k&&YEARS.slice(0,4).some(y=>k.annual[y]>Number(target.value))){error.textContent='Target akhir tidak boleh di bawah target tahunan.';return false;}
-    const next={...k,id:k?.id||crypto.randomUUID(),code:code.value.trim(),flags:fs,indicator:title.value.trim(),method:savedMethod(),target:Number(target.value),unit:unit.value.trim(),criterion:criterion.value.trim(),annual:{...k?.annual,'2029':Number(target.value)},group:k?.group||'strategi'};s.kpis=k?s.kpis.map(x=>x.id===k.id?next:x):[...s.kpis,next];return write('Menetapkan KPI '+next.code);},['bod']);
+   actions(f,'Simpan KPI',error=>{const fs=[...selectedFlags];if(!code.value.trim()||!title.value.trim()||s.kpis.some(x=>x.id!==k?.id&&x.code===code.value.trim())){error.textContent='Isi kode KPI yang unik dan indikator KPI.';return false;}if(!fs.length||fs.some(v=>!c.flags.includes(v))){error.textContent='Gunakan kode flagship yang tersedia di Kelola flagship.';return false;}if(method.value==='count'&&!Number.isInteger(Number(target.value))){error.textContent='Target satuan harus bilangan bulat.';return false;}if(k&&savedMethod()!==k.method&&s.outcomes.some(o=>o.kpiId===k.id)){error.textContent='Jenis satuan KPI yang sudah memiliki hasil tidak dapat diganti. Buat indikator baru.';return false;}if(k&&YEARS.slice(0,4).some(y=>k.annual[y]>Number(target.value))){error.textContent='Target akhir tidak boleh di bawah target tahunan.';return false;}
+    const next={...k,id:k?.id||crypto.randomUUID(),code:code.value.trim(),flags:fs,indicator:title.value.trim(),method:savedMethod(),target:Number(target.value),unit:unit.value.trim(),criterion:k?.criterion||'',annual:{...k?.annual,[LAST]:Number(target.value)},group:k?.group||'strategi'};s.kpis=k?s.kpis.map(x=>x.id===k.id?next:x):[...s.kpis,next];return write('Menetapkan KPI '+next.code);},['bod']);
   }
-  function annual(k=s.kpis[0]){if(role()!=='bod')return;const f=popup('Tetapkan target per tahun'),sel=field(f,'KPI',k.id,s.kpis.map(k=>({value:k.id,label:k.code+' · '+k.indicator})));const box=node('div',undefined,'kpi-year-grid');f.append(box);const inputs=YEARS.map(y=>field(box,y,'',null,'number'));const note=field(f,'Alasan / catatan distribusi','',null,'textarea');
-   const sync=()=>{k=s.kpis.find(k=>k.id===sel.value);inputs.forEach((n,i)=>{n.value=k.annual[YEARS[i]]??(i===4?k.target:'');n.min=0;n.max=k.target;n.step=k.method==='count'?'1':'any';});};sel.onchange=sync;sync();f.append(node('p','Target kumulatif: target 2027 sudah mencakup hasil 2025–2026. Angka contoh belum merupakan penetapan BOD.','role-note'));
-   actions(f,'Tetapkan target',error=>{const values=inputs.map(n=>Number(n.value));if(!note.value.trim()||values.some((v,i)=>v<0||v>k.target||(k.method==='count'&&!Number.isInteger(v))||(i&&v<values[i-1]))||values[4]!==k.target){error.textContent='Isi catatan; target harus meningkat / tetap, berupa bilangan bulat untuk satuan, dan 2029 sama dengan target akhir.';return false;}k.annual=Object.fromEntries(YEARS.map((y,i)=>[y,values[i]]));k.annualConfirmed=true;k.annualNote=note.value.trim();return write('Target tahunan '+k.code+': '+note.value.trim());},['bod']);
+  function annual(k){if(role()!=='bod'||window.FYDP?.readOnly||!k)return;const f=popup('Edit target per tahun');
+   f.append(node('h3',k.code+' · '+k.indicator),node('p','Target akhir: '+withUnit(k,k.target),'role-note'));
+   const box=node('div',undefined,'kpi-year-grid');f.append(box);
+   const inputs=YEARS.map((y,i)=>{const input=field(box,y,k.annual[y]??(i===4?k.target:''),null,'number');input.min=0;input.max=k.target;input.step=k.method==='count'?'1':'any';return input;});
+   f.append(node('p','Target kumulatif: target tiap tahun mencakup hasil tahun sebelumnya. Target '+LAST+' harus sama dengan target akhir.','role-note'));
+   actions(f,'Simpan target',error=>{const values=inputs.map(n=>Number(n.value));if(inputs.some(n=>n.value.trim()==='')||values.some((v,i)=>!Number.isFinite(v)||v<0||v>k.target||(k.method==='count'&&!Number.isInteger(v))||(i&&v<values[i-1]))||values[4]!==k.target){error.textContent='Isi semua target. Angka harus meningkat / tetap, bilangan bulat untuk satuan, dan '+LAST+' sama dengan target akhir.';return false;}k.annual=Object.fromEntries(YEARS.map((y,i)=>[y,values[i]]));k.annualConfirmed=true;return write('Menetapkan target tahunan '+k.code);},['bod']);
   }
   function detail(k){const f=popup('Rincian KPI · '+k.code);f.append(node('h3',k.indicator));
    const annualSection=node('section',undefined,'kpi-detail-annual'),annualHead=node('div',undefined,'kpi-detail-annual-head');annualHead.append(node('h3','Target kumulatif per tahun'));
-   if(role()==='bod')annualHead.append(button('Target per tahun',()=>annual(k),true));
-   annualSection.append(annualHead,node('p',YEARS.map(y=>y+': '+format(k,y==='2029'?k.target:k.annual[y])).join(' · ')),node('p',k.annualConfirmed?'Sudah ditetapkan BOD.':'Distribusi contoh — belum ditetapkan BOD.','role-note'));
+   if(role()==='bod'&&!window.FYDP?.readOnly)annualHead.append(button('Target per tahun',()=>annual(k),true));
+   annualSection.append(annualHead,node('p',YEARS.map(y=>y+': '+format(k,y===LAST?k.target:k.annual[y])).join(' · ')),node('p',k.annualConfirmed?'Sudah ditetapkan BOD.':'Distribusi contoh — belum ditetapkan BOD.','role-note'));
    f.append(annualSection,node('p',k.criterion,'role-note'));
    f.append(node('h3','Hasil dan sumber hitungan'));const results=s.outcomes.filter(o=>o.kpiId===k.id);if(!results.length)f.append(node('p','Belum ada hasil.'));results.forEach(o=>{const line=node('div',undefined,'kpi-result-line');line.append(node('strong',o.name),node('span',o.entity+' · '+o.year+' · '+({approved:'Tercapai',pending:'Menunggu pemeriksaan aktivitas',revision:'Perlu revisi',planned:'Belum tercapai'}[o.status]||o.status)+(o.demo?' · Dummy':'')),node('small',o.note));if(o.reviewNote)line.append(node('small','BOD: '+o.reviewNote));o.evidence.forEach(url=>{const a=node('a','Buka bukti ↗');a.href=safeURL(url);a.target='_blank';a.rel='noopener noreferrer';line.append(a);});f.append(line);});
    s.history.filter(h=>h.action.includes(k.code)&&!h.action.startsWith('Menetapkan bobot aktivitas ')&&!h.action.startsWith('Koreksi ')&&!h.action.startsWith('Menghapus koreksi ')).slice(-5).forEach(h=>f.append(node('small',h.name+' · '+h.action)));
   }
-  const filters=node('div',undefined,'kpi-scope-filter'),ys=field(filters,'Tahun',year,YEARS.map(y=>({value:y,label:y==='2029'?'2029 · target akhir':y}))),fs=field(filters,'Flagship','',[{value:'',label:'Semua flagship'},...c.flags]);screen.querySelector('.kpi-kaki').before(filters);ys.onchange=()=>{year=ys.value;render();};fs.onchange=()=>{flag=fs.value;render();};
+  const filters=node('div',undefined,'kpi-scope-filter'),ys=field(filters,'Tahun',year,YEARS.map(y=>({value:y,label:y===LAST?LAST+' · target akhir':y}))),fs=field(filters,'Flagship','',[{value:'',label:'Semua flagship'},...c.flags]);screen.querySelector('.kpi-kaki').before(filters);ys.onchange=()=>{year=ys.value;render();};fs.onchange=()=>{flag=fs.value;render();};
+  const smartTitle=$('kpi-grup-smart');if(smartTitle)smartTitle.textContent='Target SMART '+LAST;
   screen.querySelector('.layar-deskripsi').textContent='Realisasi mengikuti hasil yang disetujui BOD melalui detail aktivitas. Target dan capaian mengikuti tahun yang dipilih.';
   const explanation=$('kpi-catatan');if(explanation)explanation.textContent='Capaian = realisasi / target kumulatif tahun terpilih. Hijau ≥ 100%, kuning ≥ 70%, merah < 70%. Target nol tidak dibagi. Hasil negara / proyek dihitung sekali per ID; persentase berasal dari pengukuran, bukan jumlah aktivitas selesai.';
   function render(){s=load();if(!c.flags.includes(flag))flag='';fs.replaceChildren(new Option('Semua flagship',''),...c.flags.map(name=>new Option(name,name)));fs.value=flag;const visible=s.kpis.filter(k=>!flag||k.flags.includes(flag)),counts={done:0,ontrack:0,attention:0,empty:0};
@@ -122,36 +127,38 @@
     (flag?[flag]:k.flags).forEach(p=>{
      const key=k.id+'::'+p,tr=node('tr');tr.dataset.kpiId=k.id;
      tr.append(node('td',g==='strategi'?'Strategi':'SMART','kk-kat'));
-     const prog=node('td',p,'kk-prog');if(k.flags.length>1)prog.append(node('small',k.code+' · KPI bersama','role-status'));tr.append(prog);
-     const title=node('td',undefined,'kk-rumus'),indicator=link(k.indicator,()=>detail(k));
-     if(document.body.classList.contains('kpi-reference-page'))title.append(indicator);
-     else{const heading=node('div',undefined,'kpi-indicator-line'),open=button('',()=>detail(k));open.className='role-icon kpi-detail-open';open.title='Rincian KPI';open.setAttribute('aria-label','Buka rincian KPI '+k.code+' · '+p);
-      const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d','M6 3h8l4 4v14H6V3ZM14 3v5h4M9 12h6M9 16h6');svg.append(path);open.append(svg);heading.append(indicator,open);title.append(heading);}
-
+     const prog=node('td',p,'kk-prog');if(k.flags.length>1)prog.append(node('small',k.code+' · KPI bersama','role-status'));if(role()==='bod'&&!window.FYDP?.readOnly){const annualEdit=button('✎ Edit target',()=>annual(k));annualEdit.classList.add('kpi-annual-edit');annualEdit.setAttribute('aria-label','Edit target per tahun '+k.code+' · '+p);prog.append(annualEdit);}tr.append(prog);
+     const reference=document.body.classList.contains('kpi-reference-page'),title=node('td',undefined,'kk-rumus');
+     title.append(reference?link(k.indicator,()=>detail(k)):node('span',k.indicator,'kpi-indicator-text'));
      const child=node('tr',undefined,'kpi-collapsed-row'),childId='kpi-row-detail-'+g+'-'+encodeURIComponent(key);
      child.id=childId;child.hidden=!expanded.has(key);
      const toggle=link('',()=>{const open=!expanded.has(key);open?expanded.add(key):expanded.delete(key);child.hidden=!open;toggle.setAttribute('aria-expanded',String(open));});
      toggle.classList.add('role-subtask-toggle','kpi-row-toggle');toggle.setAttribute('aria-expanded',String(expanded.has(key)));toggle.setAttribute('aria-controls',childId);
      toggle.setAttribute('aria-label','Lihat rincian target dan realisasi '+k.code+' · '+p);
      toggle.append(node('span','', 'role-subtask-arrow'),node('span','Lihat target & realisasi'));title.append(toggle);tr.append(title);
-     YEARS.forEach(y=>{const value=y==='2029'?k.target:k.annual[y],cell=node('td',value==null?'—':format(k,value),'kk-year');cell.dataset.year=y;cell.title='Target '+y+': '+withUnit(k,value);cell.classList.toggle('is-selected-year',y===year);tr.append(cell);});
-     tr.append(node('td',r.ratio==null?'—':num(r.ratio*100)+'%','kk-capa'));
-     const stat=node('td',undefined,'kk-stat');stat.append(badge(r.status));const pending=s.outcomes.filter(o=>o.kpiId===k.id&&o.status==='pending').length;
-     if(pending)stat.append(node('small',pending+' hasil menunggu BOD','role-status'));tr.append(stat);
-     const cell=node('td');cell.colSpan=10;const panel=node('div',undefined,'kpi-row-detail');
+     YEARS.forEach(y=>{const value=y===LAST?k.target:k.annual[y],cell=node('td',value==null?'—':format(k,value),'kk-year');cell.dataset.year=y;cell.title='Target '+y+': '+withUnit(k,value);cell.classList.toggle('is-selected-year',y===year);tr.append(cell);});
+     const percentage=r.ratio==null?'—':num(r.ratio*100)+'%';
+     if(reference)tr.append(node('td',percentage,'kk-capa'));
+     const stat=node('td',undefined,'kk-stat');stat.append(badge(r.status));
+     if(!reference){const achievement=node('span',percentage,'kpi-status-achievement');achievement.setAttribute('aria-label','Capaian '+percentage);
+      const progress=node('div',undefined,'bilah kpi-achievement-bar'),fill=node('div',undefined,'bilah-isi');const width=r.ratio==null?0:Math.max(0,Math.min(100,r.ratio*100));
+      progress.setAttribute('role','progressbar');progress.setAttribute('aria-label','Capaian KPI '+k.code+' · '+p);progress.setAttribute('aria-valuemin','0');progress.setAttribute('aria-valuemax','100');progress.setAttribute('aria-valuenow',String(width));progress.setAttribute('aria-valuetext',r.ratio==null?'Belum ada capaian':percentage);progress.title=r.ratio==null?'Belum ada capaian':'Capaian '+percentage;
+      fill.style.width=width+'%';progress.append(fill);stat.append(achievement,progress);}tr.append(stat);
+     const cell=node('td');cell.colSpan=reference?10:9;const panel=node('div',undefined,'kpi-row-detail');
      const target=node('div',undefined,'kpi-row-detail-item kk-target-detail'),targetLine=node('div',undefined,'kpi-target-line');targetLine.append(node('span',withUnit(k,r.target)));
-     if(role()==='bod'){const pencil=link('\u270e',()=>edit(k));pencil.classList.add('kpi-target-edit');pencil.title='Edit KPI dan target';pencil.setAttribute('aria-label','Edit KPI '+k.code);targetLine.append(pencil);}
+     if(role()==='bod'&&!window.FYDP?.readOnly){const pencil=link('\u270e',()=>edit(k));pencil.classList.add('kpi-target-edit');pencil.title='Edit KPI dan target';pencil.setAttribute('aria-label','Edit KPI '+k.code);targetLine.append(pencil);}
      target.append(node('span','Target kumulatif · '+year,'kpi-row-detail-label'),targetLine);
      const actual=node('div',undefined,'kpi-row-detail-item kk-realisasi');actual.append(node('span','Realisasi · '+year,'kpi-row-detail-label'),node('span',withUnit(k,r.actual),'kpi-row-detail-value'));
      if(r.override)actual.append(node('small','Koreksi BOD','role-status'));
-     const finalTarget=node('div',undefined,'kpi-row-detail-item');finalTarget.append(node('span','Target akhir · 2029','kpi-row-detail-label'),node('span',withUnit(k,k.target),'kpi-row-detail-value'));
+     const finalTarget=node('div',undefined,'kpi-row-detail-item');finalTarget.append(node('span','Target akhir · '+LAST,'kpi-row-detail-label'),node('span',withUnit(k,k.target),'kpi-row-detail-value'));
      panel.append(target,actual,finalTarget);cell.append(panel);child.append(cell);tbody.append(tr,child);
     });
-   });const caption=screen.querySelector('#kpi-grup-'+g).nextElementSibling;caption.textContent=visible.filter(k=>k.group===g).length+' indikator unik · tahun '+year;}
-   const statuses=node('span',undefined,'kpi-summary-statuses');statuses.append(badge('Tercapai '+counts.done),badge('On track '+counts.ontrack),badge('Perlu perhatian '+counts.attention),badge('Belum ada data / target '+counts.empty));$('kpi-ringkas').replaceChildren(node('span',visible.length+' indikator unik · '+year,'kpi-summary-label'),statuses);roleButtons.replaceChildren();if(role()==='bod')roleButtons.append(button('Kelola flagship',manageFlags),button('Tambah KPI',()=>edit(),true),button('Target per tahun',()=>annual(),true));
-   notice.textContent=(role()==='bod'?'BOD menetapkan target; hasil KPI diperiksa lewat detail aktivitas.':role()==='manajer'?'Manager mengisi hasil dan bukti lewat detail aktivitas.':'Akses lihat KPI dan sumber hitungannya.')+' Data contoh untuk simulasi; tersimpan di browser. KPI bersama dihitung sekali dalam ringkasan.';
+   });if(!tbody.children.length){const empty=node('tr'),cell=node('td','Belum ada KPI untuk periode ini.','fydp-empty');cell.colSpan=document.body.classList.contains('kpi-reference-page')?10:9;empty.append(cell);tbody.append(empty);}
+   const caption=screen.querySelector('#kpi-grup-'+g).nextElementSibling;caption.textContent=visible.filter(k=>k.group===g).length+' indikator unik · tahun '+year;}
+   const statuses=node('span',undefined,'kpi-summary-statuses');statuses.append(badge('Tercapai '+counts.done),badge('On track '+counts.ontrack),badge('Perlu perhatian '+counts.attention),badge('Belum ada data / target '+counts.empty));$('kpi-ringkas').replaceChildren(node('span',visible.length+' indikator unik · '+year,'kpi-summary-label'),statuses);roleButtons.replaceChildren();if(role()==='bod'&&!window.FYDP?.readOnly)roleButtons.append(button('Kelola flagship',manageFlags),button('Tambah KPI',()=>edit(),true));
+   notice.textContent=window.FYDP?.readOnly?'Arsip '+window.FYDP.period.name+' · Akses lihat dan ekspor; perubahan dinonaktifkan.':(role()==='bod'?'BOD menetapkan target; hasil KPI diperiksa lewat detail aktivitas.':role()==='manajer'?'Manager mengisi hasil dan bukti lewat detail aktivitas.':'Akses lihat KPI dan sumber hitungannya.')+' Data contoh untuk simulasi; tersimpan di browser. KPI bersama dihitung sekali dalam ringkasan.';
   }
   const exportButton=screen.querySelector('.kpi-kaki button'),tools=node('div',undefined,'role-toolbar kpi-summary-actions');exportButton.before(tools);tools.append(roleButtons,exportButton);exportButton.onclick=()=>csv('kpi-'+year+'.csv',[['Kode','Flagship','Indikator','Tahun','Target kumulatif','Target akhir','Satuan','Realisasi','Capaian (%)','Status'],...s.kpis.filter(k=>!flag||k.flags.includes(flag)).map(k=>{const r=calculate(s,k,year);return[k.code,k.flags.join(' / '),k.indicator,year,r.target,k.target,k.unit,r.actual,r.ratio==null?'':r.ratio*100,r.status];})]);
-  window.addEventListener('storage',e=>{if([KEY,'seamolec-role-activities-v1'].includes(e.key))render();});return render;
+  window.addEventListener('storage',e=>{if([KEY,'seamolec-role-activities-v1'].includes(e.key?.split('::fydp:')[0]))render();});return render;
  };
 })();
